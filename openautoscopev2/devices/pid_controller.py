@@ -55,8 +55,8 @@ class PIDController():
         self.Ey = Ey
         self.Ex = Ex
 
-        self.Vy = self.Kpy * Ey + self.Kiy * self.Iy + self.Kdy * Dy
-        self.Vx = self.Kpx * Ex + self.Kix * self.Ix + self.Kdx * Dx
+        self.Vy = self.Kpy * np.sign(Ey) * (Ey / 50)**2 * 50 + self.Kiy * self.Iy + self.Kdy * Dy
+        self.Vx = self.Kpx * np.sign(Ex) * (Ex / 50)**2 * 50 + self.Kix * self.Ix + self.Kdx * Dx
 
         # self.Vy = 0.9*self.Kpy * Ey + 0.1 * self.Vy
         # self.Vx = 0.9*self.Kpx * Ex + 0.1 * self.Vx
