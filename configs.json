@@ -10,7 +10,7 @@
     "xypad-input": 0,
     "zpad-input": 0,
     "q": 0.7,
-    "data_directory": "./data",
+    "data_directory": "data",
     "camera_serial_number_behavior": "22591117",
     "camera_serial_number_gcamp": "22591142",
     "teensy_usb_port": "COM3"

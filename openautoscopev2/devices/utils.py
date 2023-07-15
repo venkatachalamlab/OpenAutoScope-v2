@@ -85,4 +85,6 @@ def resolve_path(fp: str, fp_base_dir: str):
     # Absolute Path
     if os.path.isabs(fp):
         return fp
+    if os.sep != "/":
+        fp = fp.replace("/", os.sep)
     return os.path.join( fp_base_dir, fp )
