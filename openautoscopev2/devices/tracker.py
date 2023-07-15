@@ -110,7 +110,7 @@ class TrackerDevice():
         self.xyz4xsharpness = XYZ4xSharpness(tracker=self)
         self.y_worm = self.shape[0]//2
         self.x_worm = self.shape[1]//2
-        self.pid_controller = PIDController(Kpy=15, Kpx=15, Kiy=0, Kix=0, Kdy=0, Kdx=0, SPy=self.shape[0]//2, SPx=self.shape[1]//2)
+        self.pid_controller = PIDController(Kpy=10, Kpx=10, Kiy=0, Kix=0, Kdy=0, Kdx=0, SPy=self.shape[0]//2, SPx=self.shape[1]//2)
 
         ## Z Tracking
         self.shrp_idx = 0
