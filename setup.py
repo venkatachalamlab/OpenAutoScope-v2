@@ -17,7 +17,7 @@ console_scripts = [
     'oas_logger=openautoscopev2.devices.logger:main',
     'oas_tracker=openautoscopev2.devices.tracker:main',
     'oas_teensy_commands=openautoscopev2.devices.teensy_commands:main',
-    'oas=run_gui',
+    'oas=run_gui:main',
 ]
 
 setuptools.setup(
