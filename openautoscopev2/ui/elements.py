@@ -142,6 +142,9 @@ class InputAutoselect(AbstractElement):
         raw = self.input.get()
         if not isinstance(raw, str):
             return self.type_caster(raw)
+        # Handle empty input
+        if raw.strip() == "":
+            return self.type_caster(self.bound_lower)
         # remove character values
         # don't forget the sign
         sign = "-" if raw[0] == "-" else ""
