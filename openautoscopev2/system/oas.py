@@ -38,6 +38,9 @@ class OASwithGUI:
         tracker_out_debug  = 5009,
         framerate = 20,
         data_directory = r"C:\src\OpenAutoscope-v2\data",
+        slackbottoken = "$$SLACK_BOT_TOKEN$$",
+        slackchannel = "#$$CHANNEL_NAME$$",
+        microscopename = "OPENAUTOSCOPE-PC01",
     )
     # Constructor
     def __init__(self, name, **kwargs) -> None:
@@ -84,6 +87,9 @@ class OASwithGUI:
         framerate = self.kwargs['framerate']
         format = self.kwargs['format']
         (_, _, shape) = array_props_from_string(format)
+        slackbottoken = self.kwargs['slackbottoken']
+        slackchannel = self.kwargs['slackchannel']
+        microscopename = self.kwargs['microscopename']
 
         self.jobs.append(Popen(["oas_hub",
                         f"--server={server_client}",
@@ -172,7 +178,10 @@ class OASwithGUI:
         # Logger
         self.jobs.append(Popen(["oas_logger",
                         f"--inbound={forwarder_out}",
-                        f"--directory={data_directory}"]))
+                        f"--directory={data_directory}",
+                        f"--slackbottoken={slackbottoken}",
+                        f"--slackchannel={slackchannel}",
+                        f"--microscopename={microscopename}",]))
         # TODO: add selection between only one tracker being activated
         ## Behavior Tracker
         self.jobs.append(Popen(["oas_tracker",

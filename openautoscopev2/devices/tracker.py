@@ -326,9 +326,15 @@ class TrackerDevice():
             if self.interpolation_tracking:
                 self.estimate_vz_by_interpolation()
             # Panic!!!!!
-            if self.missing_worm_idx > self.MISSING_WORM_TOLERANCE:
+            if self.missing_worm_idx >= self.MISSING_WORM_TOLERANCE:
+                # Send Message to Slack
+                if self.missing_worm_idx == self.MISSING_WORM_TOLERANCE:
+                    self.send_log(
+                        "Worm has been missing for {} frames. Stopping stage movements.<SEND_TO_SLACK>".format(
+                            self.MISSING_WORM_TOLERANCE
+                    ))
                 # TODO change it so when tracking is lost, we can help it manually. e.g. change camera position closer to worm and it continues to track
-                if self.missing_worm_idx <= (self.MISSING_WORM_TOLERANCE+100):  # send command two times to ensure stopping of all motors
+                if self.missing_worm_idx <= (self.MISSING_WORM_TOLERANCE+20):  # send command multiple times to ensure stopping of all motors
                     self.set_velocities(0, 0, 0)
                 else:
                     self.set_velocities(None, None, None)
@@ -412,7 +418,7 @@ class TrackerDevice():
         if isinstance(msg_obj, dict):  # Dict/JSON
             msg = json.dumps(msg_obj, default=int)
         # Send log
-        msg = "{} {} {}".format( time.time(), self.name, msg )
+        msg = "{} {}".format( self.name, msg )
         self.command_publisher.send(f"logger {msg}")
         return
     

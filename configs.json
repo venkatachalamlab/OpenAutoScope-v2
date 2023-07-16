@@ -13,5 +13,8 @@
     "data_directory": "data",
     "camera_serial_number_behavior": "22591117",
     "camera_serial_number_gcamp": "22591142",
-    "teensy_usb_port": "COM3"
+    "teensy_usb_port": "COM3",
+    "slackbottoken": "$$SLACK_BOT_TOKEN$$",
+    "slack_channel": "#$$CHANNEL_NAME$$",
+    "microscope_name": "OPENAUTOSCOPE-PC01"
 }
