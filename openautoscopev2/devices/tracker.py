@@ -313,6 +313,9 @@ class TrackerDevice():
         # Track X-Y-Z
         img_annotated = self.detect(img)
 
+        # Send Worm Positions
+        self.log_worm_positions()
+
         # Behavior Displayer
         self.data_publisher.send(img_annotated)
 
@@ -415,7 +418,14 @@ class TrackerDevice():
         msg = "{} {} {}".format( time.time(), self.name, msg )
         self.command_publisher.send(f"logger {msg}")
         return
-    
+
+    def log_worm_positions(self):
+        """Send found worm's position to logger."""
+        x,y = self.x_worm, self.y_worm if self.found_trackedworm else -1, -1
+        msg = f"<TRACKER-WORM-COORDS> x-y coords: ({x},{y})"
+        self.send_log(msg)
+        return
+
     def interpolate_z_tracking(self, yes_no):
         if isinstance(yes_no, bool):
             self.interpolation_tracking = yes_no
