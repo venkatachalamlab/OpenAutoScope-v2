@@ -152,7 +152,7 @@ class  WriteSession(multiprocessing.Process):
 
 
             elif self.subscription_status : 
-                if self.max_frame_no is not None and self.counter < self.max_frame_no :
+                if self.max_frame_no is None or self.counter < self.max_frame_no :
                     if self.data_subscriber.socket in sockets:
                         # Writing New Frame
                         (t, vol) = self.data_subscriber.get_last()
