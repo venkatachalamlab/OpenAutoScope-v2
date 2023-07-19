@@ -147,13 +147,25 @@ void loop()
       } else if ( subcmd == 'g' || subcmd == 'G' ) { // GCaMP
         char func = comBuf[2];
         if ( func == 's' || func == 'S' ) { // # Set Power
-          analogWrite(P_A_LED_GCAMP, atof(comBuf + 3));
+          if (atof(comBuf + 3) == 0){
+            digitalWrite(P_A_LED_GCAMP, LOW);
+          }
+          else{
+            digitalWrite(P_A_LED_GCAMP, HIGH);
+          }
+          //analogWrite(P_A_LED_GCAMP, atof(comBuf + 3));
         }
       } else if ( subcmd == 'o' || subcmd == 'O' ) {
         // Optogenetic
         char func = comBuf[2];
         if ( func == 's' || func == 'S' ) { // Set Power
-          analogWrite(P_A_LED_OPTOGENETIC, atof(comBuf + 3));
+          if (atof(comBuf + 3) == 0){
+            digitalWrite(P_A_LED_OPTOGENETIC, LOW);
+          }
+          else{
+            digitalWrite(P_A_LED_OPTOGENETIC, HIGH);
+          }
+          //analogWrite(P_A_LED_OPTOGENETIC, atof(comBuf + 3));
         }
       }
 
