@@ -108,18 +108,26 @@ class ReturnHandler(AbstractElement):
 
 ## Input Element with Autoselect and Enter Event handling
 class InputAutoselect(AbstractElement):
-    def __init__(self, key: str, default_text: int, size, type_caster=int, bounds=(None, None), font=None) -> None:
+    def __init__(
+            self,
+            key: str, default_text: int,
+            size, type_caster=int,
+            bounds=(None, None), font=None,
+            disabled=False
+        ) -> None:
         super().__init__()
         self.key = key
         self.default_text = default_text
         self.type_caster = type_caster
         self.bound_lower, self.bound_upper = bounds
+        self.disabled = disabled
         self.input = sg.Input(
             default_text=self.default_text,
             key=self.key,
             justification='righ',
             size=size,
-            font=font
+            font=font,
+            disabled=self.disabled
         )
         self.events = { self.key }
         self.elements = [ self.input ]
@@ -178,7 +186,9 @@ class LEDCompound(AbstractElement):
             icon_off, icon_on,
             icon_size: Tuple[int, int],
             type_caster = int,
-            bounds=(None, None)
+            bounds=(None, None),
+            default_text='0',
+            disabled=False
         ) -> None:
         super().__init__()
         self.icon_on = icon_on
@@ -187,6 +197,8 @@ class LEDCompound(AbstractElement):
         self.icon_size = icon_size
         self.led_name = led_name
         self.bounds = bounds
+        self.default_text = default_text
+        self.disabled = disabled
         self.key = key
         self.key_toggle = f"{self.key}-TOGGLE"
         self.key_input= f"{self.key}-INPUT"
@@ -201,15 +213,16 @@ class LEDCompound(AbstractElement):
             background_color = BACKGROUND_COLOR
         )
         self.input_as = InputAutoselect(
-            key=self.key_input, default_text='0', size=3, type_caster=type_caster,
-            bounds=self.bounds
+            key=self.key_input, default_text=self.default_text, size=3, type_caster=type_caster,
+            bounds=self.bounds,
+            disabled=self.disabled
         )
         self.elements = [
             self.button, self.text, *self.input_as.elements
         ]
         self.events = {
             self.key_toggle, self.key_input
-        }
+        } if not self.disabled else { self.key_toggle }
         self.toggle = False
         return
     # Handle
@@ -222,7 +235,7 @@ class LEDCompound(AbstractElement):
         elif event == self.key_input:
             self.input_as.handle(**kwargs)
         if self.toggle:
-            intensity = self.type_caster(self.get() * 2.55)
+            intensity = self.type_caster(self.get() * 2.55) if not self.disabled else 1
             client_cli_cmd = f"DO _teensy_commands_set_led {self.led_name} {intensity}"
             self.client.process(client_cli_cmd)
         else:

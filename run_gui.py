@@ -212,13 +212,15 @@ def main():
     elements.append(ui_offset_gcamp_y)
 
     ui_led_gfp = LEDCompound(
-        text="470nm LED power (%)",
+        text="470nm LED Toglle",
         key='led_gfp',
         led_name='g',
         icon_off=ICON_LED_GFP_OFF,
         icon_on=ICON_LED_GFP_ON,
         icon_size=ICON_SIZE,
-        bounds=(0, 100)
+        bounds=(0, 1),
+        default_text='1',
+        disabled=True
     )
     elements.append(ui_led_gfp)
 
