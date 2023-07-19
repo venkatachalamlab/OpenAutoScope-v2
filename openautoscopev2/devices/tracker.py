@@ -421,7 +421,7 @@ class TrackerDevice():
 
     def log_worm_positions(self):
         """Send found worm's position to logger."""
-        x,y = self.x_worm, self.y_worm if self.found_trackedworm else -1, -1
+        x,y = (self.x_worm, self.y_worm) if self.found_trackedworm else (-1, -1)
         msg = f"<TRACKER-WORM-COORDS> x-y coords: ({x},{y})"
         self.send_log(msg)
         return
