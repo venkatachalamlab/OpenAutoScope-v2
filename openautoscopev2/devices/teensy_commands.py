@@ -1,3 +1,6 @@
+# Copyright 2023
+# Author: Sina Rasouli, Mahdi Torkashvand
+
 """
 This communicates with the teensy board.
 Usage:
@@ -11,10 +14,11 @@ Options:
                                     [default: L5000]
     --port=<PORT>               USB port.
                                     [default: COM4]
+    --name=NAME                 Name used by the hub to send commands.
+                                    [default: teensy_commands]
 """
 
 import json
-import time
 from typing import Tuple
 
 import numpy as np
@@ -26,18 +30,16 @@ from openautoscopev2.zmq.subscriber import ObjectSubscriber
 from openautoscopev2.zmq.utils import parse_host_and_port
 
 class TeensyCommandsDevice():
-    """This device sends serial commands to the teensy board."""
-
 
     _COMMANDS = {
-        "get_pos": " \n",
+        "get_pos": "gp\n",
         "sx":"sx{xvel}\n",
         "sy":"sy{yvel}\n",
         "sz":"sz{zvel}\n",
         "disable":"sf\n",
         "enable":"sn\n",
-        "toggle_led_behavior":"lb{state}\n",
-        "set_intesity_led": "l{led_name}s{intensity}\n", # b: behavior, o: optogenetics, g: gcamp
+        "set_led":"l{led_name}{state}\n",
+        "set_motor_limit": "m{motor}{direction}"
         }
 
     def __init__(
@@ -45,22 +47,16 @@ class TeensyCommandsDevice():
             inbound: Tuple[str, int, bool],
             outbound: Tuple[str, int, bool],
             port,
-            name="teensy_commands",):
+            name="teensy_commands"):
 
         self.status = {}
         self.port = port
-        self.is_port_open = 0
         self.name = name
         self.device_status = 1
         self.zspeed = 1
-        self.led_state = False
-        self.led_intensities = {
-            'b': 0,
-            'o': 0,
-            'g': 0,
-        }
-        self.led_names = ['b', 'o', 'g']
-        self.led_idx_current = 0
+        self.led_b_state = False
+        self.led_o_state = False
+        self.led_g_state = False
 
         self.coords = [0]*6
 
@@ -78,13 +74,13 @@ class TeensyCommandsDevice():
 
         try:
             self.serial_obj = Serial(port=self.port, baudrate=115200, timeout=0)
-            self.is_port_open = self.serial_obj.is_open
         except Exception as e:
+            print("ERROR: Could not open the serial port.")
             self.log(e)
             return
 
-        self.reset_leds()
         self.enable()
+        self.reset_leds()
 
     def movex(self, xvel):
         self._execute("sx", xvel=xvel)
@@ -96,10 +92,10 @@ class TeensyCommandsDevice():
         self._execute("sz", zvel=zvel)
 
     def update_coordinates(self):
-        self.status_publisher.send("logger "+ json.dumps({"position": [self.x, self.y, self.z]}, default=int))
+        self.status_publisher.send("logger " + json.dumps({"position": [self.x, self.y, self.z]}, default=int))
 
     def log(self, msg):
-        self.status_publisher.send("logger "+ str(msg))
+        self.status_publisher.send("logger " + str(msg))
 
     def disable(self):
         self._execute("disable")
@@ -107,13 +103,16 @@ class TeensyCommandsDevice():
     def enable(self):
         self._execute("enable")
 
+    def set_motor_limit(self, motor, direction):
+        self._execute("set_motor_limit", motor=motor, direction=direction)
+
     def get_pos(self, name, i):
         self._execute("get_pos")
-        self.status_publisher.send(f"{name} set_pos {i} {self.x} {self.y} {self.z}")
+        self.status_publisher.send(f"hub _teensy_commands_set_pos {name} {i} {self.x} {self.y} {self.z}")
     
     def get_curr_pos(self, name):
         self._execute("get_pos")
-        self.status_publisher.send(f"{name} set_curr_pos {self.x} {self.y} {self.z}")
+        self.status_publisher.send(f"hub _teensy_commands_set_curr_pos {name} {self.x} {self.y} {self.z}")
     
     @property
     def x(self):
@@ -134,24 +133,18 @@ class TeensyCommandsDevice():
     def vz(self):
         return self.coords[5]
 
-    # LEDs
-    ## Toggle
-    def toggle_led(self):
-        state_str = "n" if not self.led_state else "f"
-        self._execute("toggle_led_behavior", state=state_str)
-        self.led_state = not self.led_state
-    def toggle_led_set(self, state_str):
-        self._execute("toggle_led_behavior", state=state_str)
-        self.led_state = not self.led_state
-    ## Set
-    def set_led(self, led_name, intensity):
-        self._execute("set_intesity_led", led_name=led_name, intensity=intensity)
-    ## Reset
+    def set_led(self, name, state):
+        if name == "b":
+            self.led_b_state = 1 if int(state) else 0
+        elif name == "o":
+            self.led_o_state = 1 if int(state) else 0
+        elif name == "g":
+            self.led_g_state = 1 if int(state) else 0
+
+        self._execute("set_led", led_name=name, state=state)
+
     def reset_leds(self):
-        self.led_state = True
-        self.toggle_led()
         for led_name in ['b', 'o', 'g']:
-            self.led_intensities[led_name] = 0
             self.set_led(led_name, 0)
 
     def change_vel_z(self, sign):
@@ -165,12 +158,11 @@ class TeensyCommandsDevice():
         self.movex(0)
         self.movey(0)
         self.movez(0)
-        self.device_status = 0
         self.reset_leds()
-        # Off Teensy
         self.disable()
         self.serial_obj.close()
         self.serial_obj.__del__()
+        self.device_status = 0
 
     def _execute(self, cmd: str, **kwargs):
         cmd_format_string = self._COMMANDS[cmd]
@@ -184,28 +176,22 @@ class TeensyCommandsDevice():
         self.coords = [int(coord) for coord in coords]
         self.update_coordinates()
 
-    def run(self):
-        """Starts a loop and receives and processes a message."""
+    def _run(self):
         self.command_subscriber.flush()
         while self.device_status:
-            req = self.command_subscriber.recv()
-            self.command_subscriber.process(req)
-
-
-
+            self.command_subscriber.handle()
 
 def main():
-    """Create and start DragonflyDevice."""
-
     arguments = docopt(__doc__)
 
     device = TeensyCommandsDevice(
         inbound=parse_host_and_port(arguments["--inbound"]),
         outbound=parse_host_and_port(arguments["--outbound"]),
-        port=arguments["--port"])
+        port=arguments["--port"],
+        name=arguments["--name"])
 
     if device is not None:
-        device.run()
+        device._run()
 
 if __name__ == "__main__":
     main()

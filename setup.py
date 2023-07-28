@@ -9,15 +9,14 @@ requirements = [
 console_scripts = [
     'oas_hub=openautoscopev2.devices.hub_relay:main',
     'oas_forwarder=openautoscopev2.zmq.forwarder:main',
-    'oas_processor=openautoscopev2.devices.processor:main',
+    'oas_controller_processor=openautoscopev2.devices.controller_processor:main',
     'oas_commands=openautoscopev2.devices.commands:main',
     'flir_camera=openautoscopev2.devices.flir_camera:main',
-    'oas_data_hub=openautoscopev2.devices.data_hub:main',
     'oas_writer=openautoscopev2.devices.writer:main',
     'oas_logger=openautoscopev2.devices.logger:main',
     'oas_tracker=openautoscopev2.devices.tracker:main',
     'oas_teensy_commands=openautoscopev2.devices.teensy_commands:main',
-    'oas=run_gui:main',
+    'oas=gui:main',
 ]
 
 setuptools.setup(

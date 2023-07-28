@@ -1,5 +1,3 @@
-#! python
-#
 # Copyright 2023
 # Author: Mahdi Torkashvand
 
@@ -34,7 +32,6 @@ Options:
 """
 
 import json
-import time
 from typing import Tuple
 
 import PySpin
@@ -49,7 +46,6 @@ from openautoscopev2.zmq.utils import parse_host_and_port
 
 
 class  FlirCamera():
-    """This is FlirCamera class"""
 
     def __init__(
             self,
@@ -97,10 +93,10 @@ class  FlirCamera():
             datatype=self.dtype,
             shape=(1, height, width))
 
-        self.cam, self.nodemap, self.tldevice_nodemap, self.processor, self.cam_list, self.system = self.spinnaker_camera(serial_number)
+        self.cam, self.nodemap, self.tldevice_nodemap, self.processor, self.cam_list, self.system = self._spinnaker_camera(serial_number)
         if self.cam:
             self.initiated = 1
-            self.depth, self.height, self.width, self.binsize = self.set_shape(1, height, width, binsize, None, None)
+            self.depth, self.height, self.width, self.binsize = self._set_shape(1, height, width, binsize, None, None)
             self.exposure_time, self.frame_rate = self._set_exposure_time_and_frame_rate(exposure_time, frame_rate)
             self.running = 0
             self.first_time_in_loop = 1
@@ -118,7 +114,7 @@ class  FlirCamera():
         self.publisher.send("hub " + json.dumps({self.name: self.status}, default=int))
         self.publisher.send("logger "+ json.dumps({self.name: self.status}, default=int))
 
-    def spinnaker_camera(self, serial_number):
+    def _spinnaker_camera(self, serial_number):
         processor = PySpin.ImageProcessor()
         system = PySpin.System.GetInstance()
         cam_list = system.GetCameras()
@@ -211,7 +207,7 @@ class  FlirCamera():
         return node_exposure_time.GetValue(), node_acquisition_frame_rate.GetValue()
 
 
-    def set_shape(self, depth, height, width, binsize, y_offset, x_offset):
+    def _set_shape(self, depth, height, width, binsize, y_offset, x_offset):
         if self.acquisition_status:
             self.acquisition_status = self.cam.EndAcquisition()
         node_binning_horizontal = PySpin.CIntegerPtr(self.nodemap.GetNode('BinningHorizontal'))
@@ -295,7 +291,7 @@ class  FlirCamera():
         _runner_flag = self.running
         if self.running:
              self.stop()
-        self.depth, self.height, self.width, self.binsize = self.set_shape(z, y, x, binsize, y_offset, x_offset)
+        self.depth, self.height, self.width, self.binsize = self._set_shape(z, y, x, binsize, y_offset, x_offset)
         if _runner_flag:
             self.start()
 
@@ -337,8 +333,6 @@ class  FlirCamera():
 
 
 def main():
-    """CLI entry point."""
-
     args = docopt(__doc__)
 
     flir_camera = FlirCamera(

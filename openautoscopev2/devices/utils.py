@@ -82,7 +82,6 @@ def mip_threeview(vol: np.ndarray) -> np.ndarray:
     return output
 
 def resolve_path(fp: str, fp_base_dir: str):
-    # Absolute Path
     if os.path.isabs(fp):
         return fp
     if os.sep != "/":

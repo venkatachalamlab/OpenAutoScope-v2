@@ -1,7 +1,5 @@
-#! python
-#
-# Copyright 2021
-# Author: Mahdi Torkashvand, Vivek Venkatachalam
+# Copyright 2023
+# Author: Mahdi Torkashvand, Vivek Venkatachalam, Sina Rasouli
 
 """
 Subscribes to a binary stream over TCP and saves the messages to a file.
@@ -31,8 +29,6 @@ import os
 from os.path import join, exists
 from typing import Tuple
 import multiprocessing
-import json
-import time
 
 import zmq
 from docopt import docopt
@@ -46,8 +42,6 @@ from openautoscopev2.zmq.utils import parse_host_and_port
 from openautoscopev2.devices.utils import array_props_from_string
 
 class  WriteSession(multiprocessing.Process):
-    """This is hdf_writer class"""
-
     def __init__(
             self,
             data_in: Tuple[str, int],
@@ -63,13 +57,9 @@ class  WriteSession(multiprocessing.Process):
         self.status = {}
         self.device_status = 1
         self.subscription_status = 0
-        self.counter = 0
-        self.max_frame_no = None
         self.max_frames_per_file = 3*60*20
 
-
         self.name = name
-        self.is_gcamp = 'gcamp' in self.name.lower()
         self.video_name = video_name
 
         (self.dtype, _, self.shape) = array_props_from_string(fmt)
@@ -77,7 +67,6 @@ class  WriteSession(multiprocessing.Process):
         self.n_frames_this_file = 0
         self.fp_base = "TBS"
 
-        self.data_in = data_in
         self.directory = directory
         self.poller = zmq.Poller()
 
@@ -94,27 +83,22 @@ class  WriteSession(multiprocessing.Process):
             bound=commands_in[2])
 
         self.data_subscriber = TimestampedSubscriber(
-            host=self.data_in[0],
-            port=self.data_in[1],
+            host=data_in[0],
+            port=data_in[1],
             shape=self.shape,
             datatype=self.dtype,
-            bound=self.data_in[2])
+            bound=data_in[2])
 
         self.poller.register(self.command_subscriber.socket, zmq.POLLIN)
-        self.poller.register(self.data_subscriber.socket, zmq.POLLIN)
-
-    def set_shape(self, y, x):
-        """Updates the shape, closes the data subscriber, creates a new data subscriber"""
-        self.shape = (y, x)
-        self.poller.unregister(self.data_subscriber.socket)
-        self.data_subscriber.set_shape(self.shape)
         self.poller.register(self.data_subscriber.socket, zmq.POLLIN)
 
     @property
     def filename(self) -> str:
         return join( self.fp_base, str(self.file_idx).zfill(6)+".h5" )
+
     def start(self):
         if not self.subscription_status:
+            _ = self.data_subscriber.get_last()
             self.file_idx = 0
             self.n_frames_this_file = 0
             self.fp_base = make_timestamped_filename(
@@ -128,77 +112,48 @@ class  WriteSession(multiprocessing.Process):
             self.subscription_status = 1
 
     def stop(self):
-        """Closes the hdf file, updates the status. """
         if self.subscription_status:
+            _ = self.data_subscriber.get_last()
             self.subscription_status = 0
-            self.counter =0
             self.writer.close()
 
     def shutdown(self):
-        """Close the hdf file and end while true loop of the poller"""
         self.stop()
         self.device_status = 0
 
-    def run(self):
-        """Start a while true loop with a poller that has command_subscriber already registered."""
+    def _run(self):
 
         while self.device_status:
 
             sockets = dict(self.poller.poll())
 
             if self.command_subscriber.socket in sockets:
-                _ = self.data_subscriber.get_last()
                 self.command_subscriber.handle()
 
-
-            elif self.subscription_status : 
-                if self.max_frame_no is None or self.counter < self.max_frame_no :
-                    if self.data_subscriber.socket in sockets:
-                        # Writing New Frame
-                        (t, vol) = self.data_subscriber.get_last()
-                        msg = (t, vol)
+            elif self.data_subscriber.socket in sockets:
+                msg = self.data_subscriber.get_last()
+                if self.subscription_status and msg is not None:
+                    if self.n_frames_this_file < self.max_frames_per_file:
                         self.writer.append_data(msg)
-                        self.counter +=1
                         self.n_frames_this_file += 1
-                    # Check if File Has Too Many Frames
-                    if self.n_frames_this_file >= self.max_frames_per_file:
-                        _start = time.time()
-                        # Close Current File
+                    else:
                         self.writer.close()
-                        # Open New File
                         self.file_idx += 1
                         self.writer = TimestampedArrayWriter.from_source(
                             self.data_subscriber,
                             self.filename
                         )
-                        # Reset Frames per file
-                        self.n_frames_this_file = 0
-                        # Report
-                        _duration = 1000*(time.time() - _start)
-                        print(
-                            f"<Writer-{self.video_name}> Close-Opened: {self.filename}, Duration: {_duration:>6.4f} ms"
-                        )
-                else:
-                    print(f"### Writer-{self.video_name} reached max number of frames: {self.max_frame_no}")
-                    self.stop()
-                    self.counter = 0
+                        self.writer.append_data(msg)
+                        self.n_frames_this_file = 1
 
-    def toggle(self) :
-        if self.subscription_status:
-            self.stop()
-        else :
-            self.start()
-
-    def set_duration(self, duration):
-        self.max_frame_no = duration
-        print("the number of frames are set to: {}, and of course hello world!!".format(duration))
-    
     def set_directory(self, directory):
+        try:
+            self.writer.close()
+        except:
+            pass
         self.directory = directory
-        return
 
 def main():
-    """CLI entry point."""
 
     args = docopt(__doc__)
 
@@ -211,7 +166,7 @@ def main():
         name=args["--name"],
         video_name=args["--video_name"])
 
-    writer.run()
+    writer._run()
 
 if __name__ == "__main__":
     main()

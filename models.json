@@ -1,0 +1,5 @@
+{
+    "default": "using tacker with this model does not result in any detection/tracking",
+    "xy4x": "uses threshold filtering with otsu algorithm and size of connected components",
+    "xy10x": "uses the network trained on 17000 frames"
+}

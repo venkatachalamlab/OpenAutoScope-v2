@@ -1,7 +1,5 @@
-#! python
-#
-# Copyright 2022
-# Author: Mahdi Torkashvand, Vivek Venkatachalam
+# Copyright 2023
+# Author: Mahdi Torkashvand, Sina Rasouli
 
 """
 This handles commands involving multiple devices.
@@ -19,11 +17,15 @@ Options:
                                             [default: L5000]
     --name=NAME                         device name.
                                             [default: hub]
-    --framerate=NUMBER                  camera frame rate
+    --framerate=NUMBER                  camera frame rate.
                                             [default: 1]
+    --gui_fp=DIR                        GUI directory.
+                                            [default: .]
     
 """
+import os
 import time
+import json
 
 from docopt import docopt
 
@@ -31,98 +33,118 @@ from openautoscopev2.zmq.hub import Hub
 from openautoscopev2.zmq.utils import parse_host_and_port
 
 class WormTrackerHub(Hub):
-    """This is a central hub that is responsible for subscribing and publishing
-    messages to all components of Lambda. Clients controlling the microscope
-    should communicate only with this."""
     def __init__(
             self,
             inbound,
             outbound,
             server,
             framerate,
+            gui_fp,
             name="hub"):
 
         Hub.__init__(self, inbound, outbound, server, name)
         self.framerate=framerate
+        with open(os.path.join(gui_fp, 'configs.json'), 'r', encoding='utf-8') as in_file:
+            params = json.load( in_file )
+        self.z_sign = 1 if int(params['z_dir']) == 1 else -1
+        self.y_sign = 1 if int(params['y_dir']) == 1 else -1
+        self.x_sign = 1 if int(params['x_dir']) == 1 else -1
+
 
     def shutdown(self):
-        self._displayer_shutdown()
         self._writer_shutdown()
         self._flir_camera_shutdown()
-        self._data_hub_shutdown()
         self._tracker_shutdown()
         self._writer_shutdown()
-        self._displayer_shutdown()
-        self._controller_shutdown()
+        self._controller_processor_shutdown()
         self._commands_shutdown()
         time.sleep(0.5)
         self._teensy_commands_shutdown()
         self._logger_shutdown()
         self.running = False
 
-    def _commands_shutdown(self):
-        self.send("commands shutdown")
+    def set_directories(self, directory):
+        self._writer_set_directory(directory)
+        self._logger_set_directory(directory)
 
-    def _controller_shutdown(self):
-        self.send("controller shutdown")
+    def _teensy_commands_shutdown(self):
+        self.send("teensy_commands shutdown")
 
-    def _tracker_shutdown(self):
-        # TODO: separate functions for cameras?
-        self.send("tracker_behavior shutdown")
-        self.send("tracker_gcamp shutdown")
+    def _teensy_commands_start_z_move(self, sign):
+        self.send("teensy_commands start_z_move {}".format(sign * self.z_sign))
 
-    def set_point(self, i):
-        self.send("tracker_behavior set_point {}".format(i))
-        self.send("tracker_gcamp set_point {}".format(i))
+    def _teensy_commands_change_vel_z(self, sign):
+        self.send("teensy_commands change_vel_z {}".format(sign))
+
+    def _teensy_commands_reset_leds(self):
+        self.send("teensy_commands reset_leds")
+
+    def _teensy_commands_set_led(self, led_name, state):
+        self.send("teensy_commands set_led {} {}".format(led_name, state))
+
+    def _teensy_commands_get_curr_pos(self, name):
+        self.send("teensy_commands get_curr_pos {}".format(name))
+
+    def _teensy_commands_set_curr_pos(self, name, x, y, z):
+        self.send("{} set_curr_pos {} {} {}".format(name, x, y, z))
+
+    def _teensy_commands_get_pos(self, name, i):
+        self.send("teensy_commands get_pos {} {}".format(name, i))
+
+    def _teensy_commands_set_pos(self, name, i, x, y, z):
+        self.send("{} set_pos {} {} {} {}".format(name, i, x, y, z))
+
+    def _teensy_commands_enable(self):
+        self.send("teensy_commands enable")
+
+    def _teensy_commands_disable(self):
+        self.send("teensy_commands disable")
+
+    def _teensy_commands_movex(self, xvel):
+        self.send("teensy_commands movex {}".format(xvel * self.x_sign))
+
+    def _teensy_commands_movey(self, yvel):
+        self.send("teensy_commands movey {}".format(yvel * self.y_sign))
+
+    def _teensy_commands_movez(self, zvel):
+        self.send("teensy_commands movez {}".format(zvel * self.z_sign))
+
+    def _tennsy_commands_set_motor_limit(self, motor, direction):
+        self.send("teensy_commands set_motor_limit {} {}".format(motor, direction))
 
     def _logger_shutdown(self):
         self.send("logger shutdown")
 
-    def _tracker_interpolate_z_tracking(self, yes_no):
-        self.send("tracker interpolate_z_tracking {}".format(yes_no))
-
-    def _displayer_set_shape(self, y, x):
-        # TODO: separate functions for cameras?
-        self.send("displayer_behavior set_shape {} {}".format(y, x))
-        self.send("displayer_gcamp set_shape {} {}".format(y, x))
-        self.send("displayer_debug set_shape {} {}".format(y, x))
-
-    def _displayer_shutdown(self):
-        # TODO: separate functions for cameras?
-        self.send("displayer_behavior shutdown")
-        self.send("displayer_gcamp shutdown")
-        self.send("displayer_debug shutdown")
-
-    
-    def _data_hub_set_shape(self, z, y, x):
-        # TODO: separate functions for cameras?
-        self.send("data_hub_behavior set_shape {} {}".format(y, x))
-        self.send("data_hub_gcamp set_shape {} {}".format(y, x))
-
-    def _data_hub_shutdown(self):
-        # TODO: separate functions for cameras?
-        self.send("data_hub_behavior shutdown")
-        self.send("data_hub_gcamp shutdown")
-
-    def _writer_set_saving_mode(self, saving_mode):
-        # TODO: separate functions for cameras?
-        self.send("writer_behavior set_saving_mode {}".format(saving_mode))
-        self.send("writer_gcamp set_saving_mode {}".format(saving_mode))
-
-    def _writer_set_shape(self, y, x):
-        # TODO: separate functions for cameras?
-        self.send("writer_behavior set_shape {} {}".format(y, x))
-        self.send("writer_gcamp set_shape {} {}".format(y, x))
+    def _logger_set_directory(self, directory):
+        self.send(f"logger set_directory {directory}")
 
     def _writer_start(self):
-        # TODO: separate functions for cameras?
         self.send("writer_behavior start")
         self.send("writer_gcamp start")
 
     def _writer_stop(self):
-        # TODO: separate functions for cameras?
         self.send("writer_behavior stop")
         self.send("writer_gcamp stop")
+
+    def _writer_shutdown(self):
+        self.send("writer_behavior shutdown")
+        self.send("writer_gcamp shutdown")
+
+    def _writer_set_directory(self, directory):
+        self.send("writer_gcamp set_directory {}".format(directory))
+        self.send("writer_behavior set_directory {}".format(directory))
+
+    def _tracker_set_point(self, i):
+        self.send("tracker_behavior set_point {}".format(i))
+
+    def _tracker_get_curr_pos(self):
+        self.send("tracker_behavior get_curr_pos")
+
+    def _tracker_set_offset_z(self, offset_z):
+        self.send("tracker_behavior set_offset_z {}".format(offset_z))
+
+    def _tracker_set_tracking_mode(self, tracking_mode):
+        self.send("tracker_behavior set_tracking_mode {}".format(tracking_mode))
 
     def _tracker_start(self):
         self.send("tracker_behavior start")
@@ -130,58 +152,12 @@ class WormTrackerHub(Hub):
     def _tracker_stop(self):
         self.send("tracker_behavior stop")
 
-    def _writer_toggle(self):
-        self.send("writer_behavior toggle")
-        self.send("writer_gcamp toggle")
+    def _tracker_shutdown(self):
+        self.send("tracker_behavior shutdown")
+        self.send("tracker_gcamp shutdown")
 
-    def _set_directories(self, directory):
-        self.send(f"writer_behavior set_directory {directory}")
-        self.send(f"writer_gcamp set_directory {directory}")
-        self.send(f"logger set_directory {directory}")
-
-    def _writer_shutdown(self):
-        # TODO: separate functions for cameras?
-        self.send("writer_behavior shutdown")
-        self.send("writer_gcamp shutdown")
-
-    def _flir_camera_start(self):
-        # TODO: separate functions for cameras?
-        self.send("FlirCameraBehavior start")
-        self.send("FlirCameraGCaMP start")
-    def _flir_camera_start_behavior(self):
-        self.send("FlirCameraBehavior start")
-
-    def _flir_camera_stop(self):
-        # TODO: separate functions for cameras?
-        self.send("FlirCameraBehavior stop")
-        self.send("FlirCameraGCaMP stop")
-    def _flir_camera_stop_behavior(self):
-        self.send("FlirCameraBehavior stop")
-
-    def _flir_camera_shutdown(self):
-        # TODO: separate functions for cameras?
-        self.send("FlirCameraBehavior shutdown")
-        self.send("FlirCameraGCaMP shutdown")
-
-    def _flir_camera_set_exposure_framerate(self, exposure, rate):
-        # TODO: separate functions for cameras?
-        self.send("FlirCameraBehavior set_exposure_framerate {} {}".format(exposure, rate))
-        self.send("FlirCameraGCaMP set_exposure_framerate {} {}".format(exposure, rate))
-        time.sleep(1)
-        self._flir_camera_start()
-
-    def _flir_camera_set_exposure_framerate_behavior(self, exposure, rate):
-        # TODO: separate functions for cameras?
-        self.send("FlirCameraBehavior set_exposure_framerate {} {}".format(exposure, rate))
-        # time.sleep(1)
-        # self._flir_camera_start_behavior()
-    def _flir_camera_set_exposure_framerate_gcamp(self, exposure, rate):
-        # TODO: separate functions for cameras?
-        self.send("FlirCameraGCaMP set_exposure_framerate {} {}".format(exposure, rate))
-
-    def _flir_camera_set_shape(self, z, y, x, b):
-        self.send("FlirCameraBehavior set_region {} {} {} {}".format(z, y, x, b))
-        self.send("FlirCameraGCaMP set_region {} {} {} {}".format(z, y, x, b))
+    def _tracker_interpolate_z_tracking(self, yes_no):
+        self.send("tracker_behavior interpolate_z_tracking {}".format(yes_no))
 
     def _flir_camera_set_region_behavior(self, z, y, x, b, offsety, offsetx):
         self.send("FlirCameraBehavior set_region {} {} {} {} {} {}".format(z, y, x, b, offsety, offsetx))
@@ -189,45 +165,43 @@ class WormTrackerHub(Hub):
     def _flir_camera_set_region_gcamp(self, z, y, x, b, offsety, offsetx):
         self.send("FlirCameraGCaMP set_region {} {} {} {} {} {}".format(z, y, x, b, offsety, offsetx))
 
-    def _teensy_commands_shutdown(self):
-        self.send("teensy_commands shutdown")
+    def _flir_camera_set_exposure_framerate_behavior(self, exposure, rate):
+        self.send("FlirCameraBehavior set_exposure_framerate {} {}".format(exposure * 1000, rate))
 
-    def _teensy_commands_set_led(self, led_name, intensity):
-        self.send("teensy_commands set_led {} {}".format(led_name, intensity))
+    def _flir_camera_set_exposure_framerate_gcamp(self, exposure, rate):
+        self.send("FlirCameraGCaMP set_exposure_framerate {} {}".format(exposure * 1000, rate))
 
-    def _teensy_commands_set_toggle_led(self, state_str):
-        self.send("teensy_commands toggle_led_set {}".format(state_str))
+    def _flir_camera_start(self):
+        self.send("FlirCameraBehavior start")
+        self.send("FlirCameraGCaMP start")
 
-    def _teensy_commands_movex(self, xvel):
-        self.send("teensy_commands movex {}".format(xvel))
+    def _flir_camera_stop(self):
+        self.send("FlirCameraBehavior stop")
+        self.send("FlirCameraGCaMP stop")
 
-    def _teensy_commands_movey(self, yvel):
-        self.send("teensy_commands movey {}".format(yvel))
+    def _flir_camera_start_behavior(self):
+        self.send("FlirCameraBehavior start")
 
-    def _teensy_commands_movez(self, zvel):
-        self.send("teensy_commands movez {}".format(zvel))
+    def _flir_camera_start_gcamp(self):
+        self.send("FlirCameraGCaMP start")
 
-    def _teensy_commands_disable(self):
-        self.send("teensy_commands disable")
+    def _flir_camera_stop_behavior(self):
+        self.send("FlirCameraBehavior stop")
 
-    def _tracker_set_tracking_system(self, tracking_specs, fp_model_onnx):
-        self.send(f"tracker_behavior set_tracking_system {tracking_specs} {fp_model_onnx}")
-    def _tracker_set_offset_z(self, offset_z):
-        self.send(f"tracker_behavior set_offset_z {offset_z}")
+    def _flir_camera_stop_gcamp(self):
+        self.send("FlirCameraGCaMP stop")
 
-    def duration(self, sec):
-        self.send("writer_behavior set_duration {}".format(sec*self.framerate))
-        self.send("writer_gcamp set_duration {}".format(sec*self.framerate))
+    def _flir_camera_shutdown(self):
+        self.send("FlirCameraBehavior shutdown")
+        self.send("FlirCameraGCaMP shutdown")
 
-    def change_threshold(self, direction):
-        msg = "tracker_behavior change_threshold {}".format(direction)
-        self.send(msg)
-    def change(self, value):
-        msg = "tracker_behavior change {}".format(value)
-        self.send(msg)
+    def _commands_shutdown(self):
+        self.send("commands shutdown")
+
+    def _controller_processor_shutdown(self):
+        self.send("controller_processor shutdown")
 
 def main():
-    """This is the hub for lambda."""
     arguments = docopt(__doc__)
 
     scope = WormTrackerHub(
@@ -235,6 +209,7 @@ def main():
         outbound=parse_host_and_port(arguments["--outbound"]),
         server=int(arguments["--server"]),
         framerate=int(arguments["--framerate"]),
+        gui_fp=arguments["--gui_fp"],
         name=arguments["--name"])
 
     scope.run()
