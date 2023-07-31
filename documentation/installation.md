@@ -62,7 +62,11 @@ This file provides a comprehensive guide for the step-by-step installation of al
   ```
   conda activate oas
   ```
-- Navigate to the unzipped `spinnaker_python-3.x.x.xx-cp38-cp38-win_amd64' folder and run:
+- Navigate to the unzipped `spinnaker_python-3.x.x.xx-cp38-cp38-win_amd64' folder (change the directory to where the unzipped folder is located on your system):
+  ```
+  cd ~/Download/spinnaker_python-3.x.x.xx-cp38-cp38-win_amd64
+  ```
+- Run this command:
   ```
   pip install spinnaker_python-3.x.x.xx-cp38-cp38-win_amd64.whl
   ```
