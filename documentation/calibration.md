@@ -20,12 +20,11 @@ To adjust the current, use a small flat screwdriver to turn the potentiometer. C
 </p>
 
 Once you have properly adjusted the max current for the LEDs and ensured that the LED controllers are connected to their respective power adapters, the next step is to set
-the mode to 'MOD.' This mode enables the control of the output current using the PCB, which is connected to the LED controller through a BNC cable.
+the mode to 'RIG.' This mode allows you to use the software to turn the LED on/off. Use the knob to set the power.
 
 For this, follow these steps using the top panel of the LED controller:  
-  1- Adjust the mode setting to 'MOD.'  
-  2- Turn the knob clockwise until you hear a click. This click indicates that the circuit is activated and the current can flow.
-It is worth noting that the specific value you set the knob to does not matter in this case, as the output current is controlled through the PCB rather than the knob on the LED controller.
+  1- Adjust the mode setting to 'TRIG.'  
+  2- Turn the knob clockwise until you hear a click. This click indicates that the circuit is activated and the current can flow using the LED toggle buttons on the software.
 
 <p align="center">
   <img src="../images/images/top_panel.png" alt="Image" width="300">
