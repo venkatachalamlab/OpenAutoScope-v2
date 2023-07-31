@@ -20,7 +20,7 @@ To adjust the current, use a small flat screwdriver to turn the potentiometer. C
 </p>
 
 Once you have properly adjusted the max current for the LEDs and ensured that the LED controllers are connected to their respective power adapters, the next step is to set
-the mode to 'RIG.' This mode allows you to use the software to turn the LED on/off. Use the knob to set the power.
+the mode to 'TRIG.' This mode allows you to use the software to turn the LED on/off. Use the knob to set the power.
 
 For this, follow these steps using the top panel of the LED controller:  
   1- Adjust the mode setting to 'TRIG.'  
@@ -32,7 +32,9 @@ For this, follow these steps using the top panel of the LED controller:
 
 ### Stepper Motor Drivers
 
+
 To ensure the proper functioning of the stepper motor drivers and prevent overheating, it is necessary to set the maximum output current using the potentiometers located on them. For this follow these steps:  
+It is important to note that running these on high current can burn the part after a few seconds. This has to be done for all 3 motors as fast as possible.
 
 1- Run the system to engage the stepper motors (open a command prompt and enter `activate oas && oas`)  
 2- Use a voltmeter to measure the voltage between the specified pins on the stepper motor drivers.  
