@@ -74,7 +74,7 @@ This file provides a comprehensive guide for the step-by-step installation of al
 
 ## Arduino Software
  - Make sure to deactivate your antivirus or make an exception for Arduino during the installation. (Ignore this if you do not use an antivirus)
- - Visit [Arduino](https://support.arduino.cc/hc/en-us/articles/360019833020-Download-and-install-Arduino-IDE) and download the latest release for Windows
+ - Visit [Arduino](https://support.arduino.cc/hc/en-us/articles/360019833020-Download-and-install-Arduino-IDE) and download the latest release for Windows. (Arduino 2.0.4 is tested. look for this version if the latest version caused any issues)
  - Run the installer and follow on-screen steps to complete the installation.
  - Run 'Arduino IDE', and select 'Install' if asked to install "Arduino USB Driver".
  - Go to File -> Preferences and add the following to the 'Additional boards manager URLs' and press 'Ok':
