@@ -35,6 +35,7 @@ Furthermore, to minimize background noise in the GFP channel, agarose or noble a
 - Dispense 200 μl of OP-50 bacteria in LB onto the center of the 10cm NGM plate.
 - Using a cell spreader or a sterile glass rod, evenly distribute the bacterial solution across the surface of the plate.
 - Allow the plate to sit undisturbed for 2-3 hours, or until the bacterial solution has dried completely.
+- To ensure precise z-tracking, mark three distinct points on the agar plate surface, each spaced more than 2cm apart. These reference marks can be created using either copper powder or copper sulfate. Worms tend to avoid copper, making it an effective means to encourage them to remain in the central area of the plate. Alternatively, you may utilize a worm pick to leave a mark on the plate.
 
 Please ensure that all materials used for dispensing and spreading the bacteria are sterile to maintain the cleanliness of the samples.  
 
@@ -50,7 +51,8 @@ Please ensure that all materials used for dispensing and spreading the bacteria 
  - Gently tap the worm pick or platinum wire to encourage the worm to crawl onto the agar surface.
  - Place the NGM plate upside down on a 5"x5" glass slide, ensuring that the surface of the agar plate is facing the objective.
 
-2- Sample Preparation on Glass:
+2- Sample Preparation on Glass:  
+Please note that this approach may impact the worms' natural movement. Only utilize this method if partial immobilization of the worms does not pose any issues for your specific experiment.
  - Pick a worm of interest using a worm pick or platinum wire and transfer it onto the center of the NGM plate.
  - Use a scalpel to carefully cut the agar around the worm, creating a large rectangle shape with dimensions of approximately 2"x2".
  - Use a scalpel to help lift the agar rectangle (remove the pieces close to the walls of the plate to make it easier to lift the agar pad).
