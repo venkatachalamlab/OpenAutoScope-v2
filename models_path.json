@@ -1,6 +1,0 @@
-{
-    "10x_default_all": "openautoscopev2/models/10x_default_all.onnx",
-    "10x_YA_Plate": "openautoscopev2/models/10x_default_all.onnx",
-    "10x_YA_Glass": "openautoscopev2/models/10x_default_all.onnx",
-    "4x_plate": "<NO-PATH-USED>"
-}
