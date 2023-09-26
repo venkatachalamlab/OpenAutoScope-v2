@@ -13,8 +13,11 @@
     "data_directory": "data",
     "camera_serial_number_behavior": "22591117",
     "camera_serial_number_gcamp": "22591142",
-    "teensy_usb_port": "COM5",
-    "z_dir": 1,
-    "y_dir": 1,
-    "x_dir": 1
+    "teensy_usb_port": "COM3",
+    "z_dir": -1,
+    "y_dir": -1,
+    "x_dir": -1,
+    "binsize": 4,
+    "sensor_width": 1920,
+    "sensor_height": 1200
 }

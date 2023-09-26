@@ -36,6 +36,7 @@ from typing import Tuple
 
 
 import zmq
+import cv2
 import numpy as np
 from docopt import docopt
 from openautoscopev2.devices.pid_controller import PIDController
@@ -190,11 +191,22 @@ class TrackerDevice():
             return
         
         self.data_publisher_writer.send(self.data)
+
+        if self.data.shape == (256, 256):
+            data = cv2.resize(self.data, (512, 512), interpolation=cv2.INTER_LINEAR)
+        else:
+            data = self.data
+
         if self.name == "tracker_gcamp":
-            self.data_publisher_displayer.send(self.data)
+            self.data_publisher_displayer.send(data)
             return
 
-        img_annotated = self.detect(self.data)
+        img_annotated = self.detect(data)
+
+        if self.shape[0] == 256:
+            self.x_worm //= 2
+            self.y_worm //= 2
+
         self.data_publisher_displayer.send(img_annotated)
 
         self._log_worm_positions()

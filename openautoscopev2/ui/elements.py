@@ -262,11 +262,15 @@ class ToggleTracking(AbstractElement):
         return self.state
 
 class InputWithIncrements(AbstractElement):
-    def __init__(self, text:str, key: str, default_value: int, increments: List[int] = [-1, 1], bounds: List[int] = [-1024, 1024], type_caster=int) -> None:
+    def __init__(self, text:str, key: str, default_value: int, binsize: int, x_bound: int,
+        y_bound: int, increments: List[int] = [-1, 1], bounds: List[int] = [-1024, 1024], type_caster=int) -> None:
         super().__init__()
         self.text = text
-        self.default_value = default_value
         self.bounds = bounds
+        self.binsize = binsize
+        self.default_value = default_value
+        self.x_bound = x_bound
+        self.y_bound = y_bound
         self.bound_lower = min(self.bounds)
         self.bound_upper = max(self.bounds)
         self.key = key
@@ -282,6 +286,7 @@ class InputWithIncrements(AbstractElement):
             default_text=self.default_value,
             size=4,
             type_caster=self.type_caster,
+            disabled=True,
             bounds=bounds
         )
         self.elements = [
@@ -310,18 +315,19 @@ class InputWithIncrements(AbstractElement):
                 self.bound_upper,
                 max(
                     self.bound_lower,
-                    value_current + inc
+                    value_current + inc * self.binsize
                 )
             )
             self.input_as.input.update(value = value_new)
         self.input_as.handle(**kwargs)
         value_new = self.get()
         if self.offset_direction == 'x':
-            offset_x, offset_y = 224 + value_new, 44 + int(offset_other)
+            offset_x, offset_y = (self.x_bound + value_new) // self.binsize, (self.y_bound + int(offset_other)) // self.binsize
         else:
-            offset_x, offset_y = 224 + int(offset_other), 44 + value_new
-        client_cli_cmd = "DO _flir_camera_set_region_{} 1 {} {} 2 {} {}".format(
-            self.camera_name, 512, 512, offset_y, offset_x
+            offset_x, offset_y = (self.x_bound + int(offset_other)) // self.binsize, (self.y_bound + value_new) // self.binsize
+
+        client_cli_cmd = "DO _flir_camera_set_region_{} 1 {} {} {} {} {}".format(
+            self.camera_name, int(1024 / self.binsize), int(1024 / self.binsize), self.binsize, offset_y, offset_x
         )
         self.client.process(client_cli_cmd)
 

@@ -69,12 +69,8 @@ def main():
     BUTTON_COLOR = '#626567'
     ICON_SIZE = (64, 64)
 
-    CAMERA_X_MAX = 1920
-    CAMERA_Y_MAX = 1200
-    default_b_x_offset = 0 if 'offset_behavior_x' not in all_states else all_states['offset_behavior_x']
-    default_b_y_offset = 0 if 'offset_behavior_y' not in all_states else all_states['offset_behavior_y']
-    default_g_x_offset = 0 if 'offset_gcamp_x' not in all_states else all_states['offset_gcamp_x']
-    default_g_y_offset = 0 if 'offset_gcamp_y' not in all_states else all_states['offset_gcamp_y']
+    CAMERA_X_MAX = 1920 if 'sensor_width' not in all_states else all_states['sensor_width']
+    CAMERA_Y_MAX = 1200 if 'sensor_height' not in all_states else all_states['sensor_height']
     exposure_behavior = 18 if 'exposure_behavior' not in all_states else all_states['exposure_behavior']
     exposure_gcamp = 18 if 'exposure_gcamp' not in all_states else all_states['exposure_gcamp']
     framerate = 20 if 'framerate' not in all_states else all_states['framerate']
@@ -84,15 +80,32 @@ def main():
     q = 0.0 if 'q' not in all_states else float(all_states['q'])
     interpolation_tracking = False
     offset_step_small = 2
-    offset_step_large = 10
-    fmt = "UINT8_YX_512_512"
+    offset_step_large = 8
+    binsize_param = 2 if 'binsize' not in all_states else all_states['binsize']
+    binsize = 4 if binsize_param == 4 else 2
+    fmt = "UINT8_YX_{}_{}".format(int(1024/binsize), int(1024/binsize))
+    default_b_x_offset = 0 if 'offset_behavior_x' not in all_states else all_states['offset_behavior_x']
+    default_b_y_offset = 0 if 'offset_behavior_y' not in all_states else all_states['offset_behavior_y']
+    default_g_x_offset = 0 if 'offset_gcamp_x' not in all_states else all_states['offset_gcamp_x']
+    default_g_y_offset = 0 if 'offset_gcamp_y' not in all_states else all_states['offset_gcamp_y']
+
+    default_b_x_offset -= default_b_x_offset % (binsize * 2)
+    default_b_y_offset -= default_b_y_offset % (binsize * 2)
+    default_g_x_offset -= default_g_x_offset % (binsize * 2)
+    default_g_y_offset -= default_g_y_offset % (binsize * 2)
+
+    default_b_x_offset = min(max(default_b_x_offset, -(CAMERA_X_MAX - 1024) // 2), (CAMERA_X_MAX - 1024) // 2)
+    default_b_y_offset = min(max(default_b_y_offset, -(CAMERA_Y_MAX - 1024) // 2), (CAMERA_Y_MAX - 1024) // 2)
+    default_g_x_offset = min(max(default_g_x_offset, -(CAMERA_X_MAX - 1024) // 2), (CAMERA_X_MAX - 1024) // 2)
+    default_g_y_offset = min(max(default_g_y_offset, -(CAMERA_Y_MAX - 1024) // 2), (CAMERA_Y_MAX - 1024) // 2)
+    
     (_, _, shape) = array_props_from_string(fmt)
     forwarder_in = str(5000)
     server_client = str(5002)
 
     tracker_to_displayer_behavior = 5008
     tracker_to_displayer_gcamp = 5009
-    binsize = 2
+    
 
     y_bound = int((CAMERA_Y_MAX - binsize * shape[0]) / (2 * binsize))
     x_bound = int((CAMERA_X_MAX - binsize * shape[1]) / (2 * binsize))
@@ -123,7 +136,10 @@ def main():
         text = "X Offset",
         key="offset_behavior_x",
         default_value=default_b_x_offset,
-        bounds=[-x_bound, x_bound],
+        binsize=binsize,
+        x_bound=x_bound * binsize,
+        y_bound=y_bound * binsize,
+        bounds=[-x_bound * binsize, x_bound * binsize],
         increments=[-offset_step_large,
                     -offset_step_small,
                     offset_step_small,
@@ -136,7 +152,10 @@ def main():
         text = "Y Offset",
         key="offset_behavior_y",
         default_value=default_b_y_offset,
-        bounds=[-y_bound, y_bound],
+        binsize=binsize,
+        x_bound=x_bound * binsize,
+        y_bound=y_bound * binsize,
+        bounds=[-y_bound * binsize, y_bound * binsize],
         increments=[-offset_step_large,
                     -offset_step_small,
                     offset_step_small,
@@ -149,7 +168,10 @@ def main():
         text = "X Offset",
         key="offset_gcamp_x",
         default_value=default_g_x_offset,
-        bounds=[-x_bound, x_bound],
+        bounds=[-x_bound * binsize, x_bound * binsize],
+        binsize=binsize,
+        x_bound=x_bound * binsize,
+        y_bound=y_bound * binsize,
         increments=[-offset_step_large,
                     -offset_step_small,
                     offset_step_small,
@@ -162,7 +184,10 @@ def main():
         text = "Y Offset",
         key="offset_gcamp_y",
         default_value=default_g_y_offset,
-        bounds=[-y_bound, y_bound],
+        bounds=[-y_bound * binsize, y_bound * binsize],
+        binsize=binsize,
+        x_bound=x_bound * binsize,
+        y_bound=y_bound * binsize,
         increments=[-offset_step_large,
                     -offset_step_small,
                     offset_step_small,
@@ -373,7 +398,7 @@ def main():
         window=window,
         data_r=f"L{tracker_to_displayer_behavior}",
         data_g=f"L{tracker_to_displayer_gcamp}",
-        fmt=fmt,
+        fmt="UINT8_YX_512_512",
         q=q
     )
 
@@ -389,10 +414,10 @@ def main():
     ui_xygamepad.bind()
     ui_zgamepad.bind()
 
-    offset_bx = x_bound + int(values['offset_behavior_x'])
-    offset_by = y_bound + int(values['offset_behavior_y'])
-    offset_gx = x_bound + int(values['offset_gcamp_x'])
-    offset_gy = y_bound + int(values['offset_gcamp_y'])
+    offset_bx = x_bound + default_b_x_offset // binsize
+    offset_by = y_bound + default_b_y_offset // binsize
+    offset_gx = x_bound + default_g_x_offset // binsize
+    offset_gy = y_bound + default_g_y_offset // binsize
 
     for k,v in all_states.items():
         values[k] = v
