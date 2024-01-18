@@ -58,6 +58,7 @@ class  WriteSession(multiprocessing.Process):
         self.device_status = 1
         self.subscription_status = 0
         self.max_frames_per_file = 3*60*20
+        self.STORE_EVERY_N_FRAMES = 1
 
         self.name = name
         self.video_name = video_name
@@ -134,7 +135,8 @@ class  WriteSession(multiprocessing.Process):
                 msg = self.data_subscriber.get_last()
                 if self.subscription_status and msg is not None:
                     if self.n_frames_this_file < self.max_frames_per_file:
-                        self.writer.append_data(msg)
+                        if (self.n_frames_this_file%self.STORE_EVERY_N_FRAMES) == 0:
+                            self.writer.append_data(msg)
                         self.n_frames_this_file += 1
                     else:
                         self.writer.close()

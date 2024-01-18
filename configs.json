@@ -1,8 +1,8 @@
 {
-    "offset_behavior_x": 0,
-    "offset_behavior_y": 0,
-    "offset_gcamp_x": 0,
-    "offset_gcamp_y": 0,
+    "offset_behavior_x": -128,
+    "offset_behavior_y": -76,
+    "offset_gcamp_x": -136,
+    "offset_gcamp_y": 68,
     "exposure_gcamp": 18,
     "exposure_behavior": 18,
     "framerate": 20,
@@ -14,10 +14,10 @@
     "camera_serial_number_behavior": "22591117",
     "camera_serial_number_gcamp": "22591142",
     "teensy_usb_port": "COM3",
-    "z_dir": -1,
+    "z_dir": 1,
     "y_dir": -1,
     "x_dir": -1,
-    "binsize": 4,
+    "binsize": 2,
     "sensor_width": 1920,
     "sensor_height": 1200
 }

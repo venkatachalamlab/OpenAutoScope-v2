@@ -35,7 +35,7 @@ AccelStepper stepperZ(AccelStepper::DRIVER, P_STP_Z, P_DIR_Z);
 long x, y, z;
 long xlimp=45000.0; 
 long ylimp=45000.0;
-long zlimp=30000.0;
+long zlimp=0.0;
 long xlimn=-45000.0;
 long ylimn=-45000.0;
 long zlimn=-30000.0;

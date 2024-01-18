@@ -19,7 +19,8 @@ class Detector():
     
     def __init__(self, tracker, gui_fp):
         self.tracker = tracker
-        self.ort_xy10x = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x_all.onnx'))
+        self.ort_xy10x = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x.onnx'))
+        self.ort_xy10x_all = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x_all.onnx'))
 
     def default(self, img):
         self.tracker.found_trackedworm = False
@@ -98,6 +99,23 @@ class Detector():
         ort_outs = self.ort_xy10x.run( None, batch_1_400_400 )
         # The network is trained to output (x, y)
         self.tracker.x_worm, self.tracker.y_worm = ort_outs[0][0].astype(np.int64) + 56
+
+        frame = cv.circle(frame, (int(self.tracker.x_worm), int(self.tracker.y_worm)), radius=10, color=255, thickness=2)
+        frame = cv.circle(frame, (255, 255), radius=2, color=255, thickness=2)
+
+        return frame
+
+    def xy10x_all(self, img):
+        frame = img.copy()
+        self.tracker.found_trackedworm = True
+        batch_1_512_512 = {
+            'input': np.repeat(
+                frame[None, None, :, :], 3, 1
+            ).astype(np.float32)
+        }
+        ort_outs = self.ort_xy10x_all.run( None, batch_1_512_512 )
+        # The network is trained to output (x, y)
+        self.tracker.x_worm, self.tracker.y_worm = ort_outs[0][0].astype(np.int64)
 
         frame = cv.circle(frame, (int(self.tracker.x_worm), int(self.tracker.y_worm)), radius=10, color=255, thickness=2)
         frame = cv.circle(frame, (255, 255), radius=2, color=255, thickness=2)
