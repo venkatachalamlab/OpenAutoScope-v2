@@ -593,6 +593,7 @@ class ZInterpolationTracking(AbstractElement):
         self.events = {
             self.key_checkbox, self.key_p1, self.key_p2, self.key_p3,
         }
+        self.initial_toggle = True
 
     def handle(self, **kwargs):
         event = kwargs['event']
@@ -605,6 +606,22 @@ class ZInterpolationTracking(AbstractElement):
             self.p2.update(disabled=p_disabled, button_color=button_color)
             self.p3.update(disabled=p_disabled, button_color=button_color)
             self.p1_is_set, self.p2_is_set, self.p3_is_set = False, False, False
+            # Initial toggle will use hard-coded parameters
+            if self.initial_toggle and self.checkbox.get():
+                self.initial_toggle = False
+                # Enable all
+                self.p1_is_set, self.p2_is_set, self.p3_is_set = True, True, True
+                self.p1.update(button_color=self.color_set)
+                self.p2.update(button_color=self.color_set)
+                self.p3.update(button_color=self.color_set)
+                # Set coords
+                client_cli_cmd = "DO _tracker_set_point 1"
+                self.client.process("DO _teensy_commands_set_pos tracker_behavior 1 413 -263 3534")
+                self.client.process("DO _teensy_commands_set_pos tracker_behavior 2 -2238 12873 3173")
+                self.client.process("DO _teensy_commands_set_pos tracker_behavior 3 -11810 2374 3451")
+                print("DEFAULT Z-INTERPOLATIONS SET")
+
+
         elif event == self.key_p1:
             self.p1_is_set = True
             self.p1.update(button_color=self.color_set)
