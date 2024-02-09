@@ -19,7 +19,7 @@ class Detector():
     
     def __init__(self, tracker, gui_fp):
         self.tracker = tracker
-        self.ort_xy10x = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x_all.onnx'))
+        self.ort_xy10x = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x.onnx'))
 
     def default(self, img):
         self.tracker.found_trackedworm = False
