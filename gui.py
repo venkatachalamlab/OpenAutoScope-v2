@@ -80,7 +80,7 @@ def main():
     zgamepad = 0 if 'zpad-input' not in all_states else all_states['zpad-input']
     q = 0.0 if 'q' not in all_states else float(all_states['q'])
     interpolation_tracking = False
-    z_auto_focus = False
+    z_autofocus_tracking = False
     offset_step_small = 2
     offset_step_large = 8
     binsize_param = 2 if 'binsize' not in all_states else all_states['binsize']
@@ -259,7 +259,7 @@ def main():
     ui_interpolation_tracking = ZInterpolationTracking(state=interpolation_tracking)
     elements.append(ui_interpolation_tracking)
 
-    ui_z_auto_focus = ZAutoFocus(state=z_auto_focus)
+    ui_z_auto_focus = ZAutoFocus(state=z_autofocus_tracking)
     elements.append(ui_z_auto_focus)
 
     ui_tracking_model = ModelsCombo(
@@ -435,6 +435,7 @@ def main():
     values['tracker_to_displayer_behavior'] = all_states['tracker_to_displayer_behavior'] if 'tracker_to_displayer_behavior' in all_states.keys() else tracker_to_displayer_behavior
     values['tracker_to_displayer_gcamp'] = all_states['tracker_to_displayer_gcamp'] if 'tracker_to_displayer_gcamp' in all_states.keys() else tracker_to_displayer_gcamp
     values['interpolation_tracking'] = all_states['interpolation_tracking'] if 'interpolation_tracking' in all_states.keys() else interpolation_tracking
+    values['z_autofocus_tracking'] = all_states['z_autofocus_tracking'] if 'z_autofocus_tracking' in all_states.keys() else z_autofocus_tracking
     values['format'] = all_states['format'] if 'format' in all_states.keys() else fmt
     values['binsize'] = all_states['binsize'] if 'binsize' in all_states.keys() else binsize
 

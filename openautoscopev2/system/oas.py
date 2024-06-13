@@ -46,6 +46,7 @@ class OASwithGUI:
         tracker_to_displayer_behavior = self.kwargs['tracker_to_displayer_behavior']
         tracker_to_displayer_gcamp = self.kwargs['tracker_to_displayer_gcamp']
         interpolation_tracking =  self.kwargs['interpolation_tracking']
+        z_autofocus_tracking =  self.kwargs['z_autofocus_tracking']
         framerate = self.kwargs['framerate']
         format = self.kwargs['format']
         binsize = self.kwargs['binsize']
@@ -108,6 +109,7 @@ class OASwithGUI:
                         f"--data_out_displayer={tracker_to_displayer_behavior}",
                         f"--format={format}",
                         f"--interpolation_tracking={interpolation_tracking}",
+                        f"--z_autofocus_tracking={z_autofocus_tracking}",
                         f"--name=tracker_behavior",
                         f"--gui_fp={gui_fp}"]))
 
@@ -119,6 +121,7 @@ class OASwithGUI:
                         f"--data_out_displayer={tracker_to_displayer_gcamp}",
                         f"--format={format}",
                         f"--interpolation_tracking={interpolation_tracking}",
+                        f"--z_autofocus_tracking={z_autofocus_tracking}",
                         f"--name=tracker_gcamp",
                         f"--gui_fp={gui_fp}",
                         "--flip_image"]))

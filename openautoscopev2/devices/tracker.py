@@ -350,6 +350,7 @@ def main():
         data_out_displayer=parse_host_and_port(arguments["--data_out_displayer"]),
         fmt=arguments["--format"],
         interpolation_tracking=arguments["--interpolation_tracking"],
+        z_autofocus_tracking=arguments["--z_autofocus_tracking"],
         name=arguments["--name"],
         gui_fp=arguments["--gui_fp"],
         flip_image=arguments["--flip_image"])
