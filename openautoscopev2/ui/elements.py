@@ -725,6 +725,48 @@ class ZAutoFocus(AbstractElement):
             self.key: self.get()
         })
 
+class WriteEveryNFrames(AbstractElement):
+    def __init__(self) -> None:
+        super().__init__()
+        self.key = "WRITEEVERYNFRAMES"
+        self.text = sg.Text("Write every N frames: ", background_color=BACKGROUND_COLOR)
+        self.input_as = InputAutoselect(
+            key=self.key, default_text="10", size=6, type_caster=int,
+            bounds=[1, None]
+        )
+
+        self.elements = [
+            self.text,
+            *self.input_as.elements
+        ]
+        self.events = {self.key}
+
+    def handle(self, **kwargs):
+        self.input_as.handle(**kwargs)
+        write_every_n_frames = self.get()
+        # Set the offset value!
+        client_cli_cmd = "DO _writer_set_write_every_n_frames {}".format(
+            write_every_n_frames
+        )
+        self.client.process(client_cli_cmd)
+        return
+
+
+    def add_values(self, values):
+        values[self.key] = self.get()
+
+    def get(self):
+        return self.input_as.get()
+
+    def add_state(self, all_states):
+        self.input_as.add_state(all_states)
+
+    def load_state(self, all_states):
+        self.input_as.load_state(all_states)
+        self.handle({
+            self.key: self.get()
+        })
+
 class ModelsCombo(AbstractElement):
     def __init__(self, text: str, key: str, fp) -> None:
         super().__init__()

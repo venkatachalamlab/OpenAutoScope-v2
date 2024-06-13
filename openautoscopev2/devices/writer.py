@@ -59,8 +59,7 @@ class  WriteSession(multiprocessing.Process):
         self.device_status = 1
         self.subscription_status = 0
         self.max_frames_per_file = 3*60*20
-        self.STORE_EVERY_N_FRAMES = 10  # Long-term imagings
-        # self.STORE_EVERY_N_FRAMES = 1
+        self.write_every_n_frames = 10  # Long-term imagings
         self.led_states = defaultdict(bool)
 
         self.name = name
@@ -114,6 +113,10 @@ class  WriteSession(multiprocessing.Process):
         is_on = led_state > 0 if isinstance(led_state, int) else led_state
         self.led_states[led_name] = is_on
         return
+    
+    def set_write_every_n_frames(self, write_every_n_frames):
+        self.write_every_n_frames = write_every_n_frames
+        return
 
     def start(self):
         if not self.subscription_status:
@@ -153,7 +156,7 @@ class  WriteSession(multiprocessing.Process):
                 msg = self.data_subscriber.get_last()
                 if self.subscription_status and msg is not None:
                     if self.n_frames_this_file < self.max_frames_per_file:
-                        if self.any_led_on or ( (self.n_frames_this_file%self.STORE_EVERY_N_FRAMES) == 0 ):
+                        if self.any_led_on or ((self.n_frames_this_file % self.write_every_n_frames) == 0):
                             self.writer.append_data(msg)
                         self.n_frames_this_file += 1
                     else:

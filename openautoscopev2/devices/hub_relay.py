@@ -141,6 +141,10 @@ class WormTrackerHub(Hub):
         self.send("writer_gcamp set_directory {}".format(directory))
         self.send("writer_behavior set_directory {}".format(directory))
 
+    def _writer_set_write_every_n_frames(self, write_every_n_frames):
+        self.send("writer_behavior set_write_every_n_frames {}".format(write_every_n_frames))
+        self.send("writer_gcamp set_write_every_n_frames {}".format(write_every_n_frames))
+
     def _tracker_set_point(self, i):
         self.send("tracker_behavior set_point {}".format(i))
 

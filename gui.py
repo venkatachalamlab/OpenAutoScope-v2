@@ -20,7 +20,7 @@ from openautoscopev2.ui.elements import (
     ZInterpolationTracking, ToggleRecording, ToggleTracking,
     XYGamePad, ZGamePad, FolderBrowser, ModelsCombo,
     InputwithIncrementsforZOffset, MotorLimit,
-    ZAutoFocus
+    ZAutoFocus, WriteEveryNFrames
 )
 
 from openautoscopev2.icons.icons import *
@@ -276,6 +276,9 @@ def main():
     )
     elements.append(ui_tracker_z_offset)
 
+    ui_write_every_n_frames = WriteEveryNFrames()
+    elements.append(ui_write_every_n_frames)
+
     ui_xygamepad = XYGamePad(
         icon_xleft=ICON_X_NEG, icon_xright=ICON_X_POS,
         icon_yleft=ICON_Y_NEG, icon_yright=ICON_Y_POS,
@@ -371,7 +374,7 @@ def main():
         ],[
             *ui_interpolation_tracking.elements, sg.VSeparator(), *ui_tracker_z_offset.elements, sg.VSeparator(), *ui_tracking_model.elements
         ],[
-            *ui_z_auto_focus.elements,
+            *ui_z_auto_focus.elements, sg.VSeparator(), *ui_write_every_n_frames.elements
         ],[
             sg.HorizontalSeparator(),
         ],[
