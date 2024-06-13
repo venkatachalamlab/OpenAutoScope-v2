@@ -87,6 +87,7 @@ class TrackerDevice():
         self.detector = Detector(tracker=self, gui_fp=gui_fp)
         self.y_worm = self.shape[0]//2
         self.x_worm = self.shape[1]//2
+        self.z_worm_focus = None
         self.pid_controller = PIDController(Kpy=10, Kpx=10, Kiy=0, Kix=0, Kdy=0, Kdx=0, SPy=self.shape[0]//2, SPx=self.shape[1]//2)
 
         self.trackedworm_size = None
@@ -164,9 +165,26 @@ class TrackerDevice():
         curr_point_offsetted = self.curr_point.copy()
         curr_point_offsetted[2] += self.offset_z
         d = np.dot(curr_point_offsetted, self.N) - self.d0
-        sign = -np.sign(d)
-        magnitude = (self.VZ_MAX * 2) * ( np.abs(d) / (1+np.abs(d)) )
-        return int( sign * magnitude )
+        # DEBUG
+        if self.z_worm_focus is None:
+            print("NOT WORKING!")  # DEBUG
+            sign = -np.sign(d)
+            magnitude = (self.VZ_MAX * 2) * ( np.abs(d) / (1+np.abs(d)) )
+            vz_estimated = int( sign * magnitude )
+        else:
+            # DEBUG
+            z_focus_offsetted = self.z_worm_focus + 0.0  # This is where we want the focus to be locked. positive values -> darker worm, I think more visible pharynx
+            vz_estimated = np.clip(
+                z_focus_offsetted * self.VZ_MAX * 2,
+                -2*self.VZ_MAX, 2*self.VZ_MAX
+            )
+            vz_estimated = int(vz_estimated)
+            ## DEBUG CLOSE TO FOCUS, STOP
+            if np.abs(z_focus_offsetted) < 0.05:  # This is the sensitivity to stay around the focus value -> higher means less accurate focus and less frequent movements, lower means higher accuracy of focus but lost of small movements
+                vz_estimated = 0
+            # DEBUG
+            print(f"Z Focus: {self.z_worm_focus:>.3f} | Offsetted: {z_focus_offsetted:>.3f} | V_z: {vz_estimated:>6d}")
+        return vz_estimated
 
     def get_curr_pos(self):
         self.command_publisher.send(f"hub _teensy_commands_get_curr_pos {self.name}")

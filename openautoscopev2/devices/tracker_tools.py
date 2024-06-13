@@ -3,6 +3,7 @@ import os
 import onnxruntime
 from skimage import filters
 import cv2 as cv
+import time
 
 
 IMG_BLUR_SIZE = 5
@@ -21,6 +22,11 @@ class Detector():
         self.tracker = tracker
         self.ort_xy10x = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x.onnx'))
         self.ort_xy10x_all = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x_all.onnx'))
+        self.ort_xy10x_all_focus = onnxruntime.InferenceSession(os.path.join(gui_fp, r'openautoscopev2/models/10x_all_focus_model109.onnx'))
+        # DEBUG
+        self.DEBUG_counter = 0
+        self.DEBUG_total_time_XYtracker = 0.0
+        self.DEBUG_total_time_autofocus = 0.0
 
     def default(self, img):
         self.tracker.found_trackedworm = False
@@ -113,9 +119,24 @@ class Detector():
                 frame[None, None, :, :], 3, 1
             ).astype(np.float32)
         }
-        ort_outs = self.ort_xy10x_all.run( None, batch_1_512_512 )
         # The network is trained to output (x, y)
+        _start = time.time()
+        ort_outs = self.ort_xy10x_all.run( None, batch_1_512_512 )
         self.tracker.x_worm, self.tracker.y_worm = ort_outs[0][0].astype(np.int64)
+        _duration = time.time() - _start
+        self.DEBUG_total_time_XYtracker += _duration
+        # Network predicts z-focus
+        _start = time.time()
+        ort_outs = self.ort_xy10x_all_focus.run( None, batch_1_512_512 )
+        self.tracker.z_worm_focus = np.float32(ort_outs[0][0][0])
+        _duration = time.time() - _start
+        self.DEBUG_total_time_autofocus += _duration
+        self.DEBUG_counter += 1
+        if self.DEBUG_counter%300 == 0:
+            print("Average inference XY/focus: {:>5.3f}/{:>5.3f} (ms)".format(
+                1000*self.DEBUG_total_time_XYtracker/self.DEBUG_counter,
+                1000*self.DEBUG_total_time_autofocus/self.DEBUG_counter
+            ))
 
         frame = cv.circle(frame, (int(self.tracker.x_worm), int(self.tracker.y_worm)), radius=10, color=255, thickness=2)
         frame = cv.circle(frame, (255, 255), radius=2, color=255, thickness=2)
