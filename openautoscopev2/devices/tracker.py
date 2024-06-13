@@ -25,6 +25,8 @@ Options:
                                             [default: tracker]
     --interpolation_tracking=BOOL       Uses user-specified points to interpolate z.
                                             [default: False]
+    --z_autofocus_tracking=BOOL       Uses a pre-trained model to estimate focus.
+                                            [default: False]
     --gui_fp=DIR                        GUI directory used to load model names.
                                             [default: .]
     --flip_image                        Flip x in recieved image before publishing.
@@ -59,6 +61,7 @@ class TrackerDevice():
             data_out_displayer: Tuple[str, int],
             fmt: str,
             interpolation_tracking:bool,
+            z_autofocus_tracking:bool,
             name: str,
             gui_fp: str,
             flip_image: bool
@@ -71,6 +74,7 @@ class TrackerDevice():
         self.VZ_MAX = 16
 
         self.interpolation_tracking = interpolation_tracking.lower() == 'true' if isinstance(interpolation_tracking, str) else interpolation_tracking
+        self.z_autofocus_tracking = z_autofocus_tracking.lower() == 'true' if isinstance(z_autofocus_tracking, str) else z_autofocus_tracking
         self.points = np.zeros((3, 3)) * np.nan
         self.curr_point = np.zeros(3)
         self.N = np.zeros(3) * np.nan
@@ -165,21 +169,24 @@ class TrackerDevice():
         curr_point_offsetted = self.curr_point.copy()
         curr_point_offsetted[2] += self.offset_z
         d = np.dot(curr_point_offsetted, self.N) - self.d0
-        # DEBUG
+        sign = -np.sign(d)
+        magnitude = (self.VZ_MAX * 2) * ( np.abs(d) / (1+np.abs(d)) )
+        vz_estimated = int( sign * magnitude )
+        return vz_estimated
+    
+    def _estimate_vz_by_z_autofocus(self):
         if self.z_worm_focus is None:
             print("NOT WORKING!")  # DEBUG
-            sign = -np.sign(d)
-            magnitude = (self.VZ_MAX * 2) * ( np.abs(d) / (1+np.abs(d)) )
-            vz_estimated = int( sign * magnitude )
+            vz_estimated = None
         else:
-            # DEBUG
+            # Estimate Z-AutoFocus and add offset
             z_focus_offsetted = self.z_worm_focus + 0.0  # This is where we want the focus to be locked. positive values -> darker worm, I think more visible pharynx
             vz_estimated = np.clip(
                 z_focus_offsetted * self.VZ_MAX * 2,
                 -2*self.VZ_MAX, 2*self.VZ_MAX
             )
             vz_estimated = int(vz_estimated)
-            ## DEBUG CLOSE TO FOCUS, STOP
+            # If close to good focus, stop movement
             if np.abs(z_focus_offsetted) < 0.05:  # This is the sensitivity to stay around the focus value -> higher means less accurate focus and less frequent movements, lower means higher accuracy of focus but lost of small movements
                 vz_estimated = 0
             # DEBUG
@@ -229,7 +236,13 @@ class TrackerDevice():
 
         self._log_worm_positions()
 
-        self.vz = self._estimate_vz_by_interpolation() if self.interpolation_tracking else 0
+        # Tracking in Z direction
+        # Priority: Z-AutoFocus > Interpolation
+        self.vz = None
+        if self.z_autofocus_tracking:
+            self.vz = self._estimate_vz_by_z_autofocus()
+        elif self.interpolation_tracking:
+            self.vz = self._estimate_vz_by_interpolation()
 
         if self.tracking and not self.found_trackedworm:
             self.missing_worm_idx += 1
@@ -293,6 +306,16 @@ class TrackerDevice():
             self.points = np.zeros((3, 3)) * np.nan
             self.N = np.zeros(3) * np.nan
             self.isN = False
+        return
+    
+    def set_z_autofocus_tracking(self, yes_no):
+        if isinstance(yes_no, bool):
+            self.z_autofocus_tracking = yes_no
+        elif isinstance(yes_no, int):
+            self.z_autofocus_tracking = yes_no == 1
+        else:
+            self.z_autofocus_tracking = yes_no.lower() == 'true'
+        return
 
     def _run(self):
 

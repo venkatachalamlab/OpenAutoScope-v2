@@ -19,7 +19,8 @@ from openautoscopev2.ui.elements import (
     ExposureCompound, FramerateCompound, LED,
     ZInterpolationTracking, ToggleRecording, ToggleTracking,
     XYGamePad, ZGamePad, FolderBrowser, ModelsCombo,
-    InputwithIncrementsforZOffset, MotorLimit
+    InputwithIncrementsforZOffset, MotorLimit,
+    ZAutoFocus
 )
 
 from openautoscopev2.icons.icons import *
@@ -79,6 +80,7 @@ def main():
     zgamepad = 0 if 'zpad-input' not in all_states else all_states['zpad-input']
     q = 0.0 if 'q' not in all_states else float(all_states['q'])
     interpolation_tracking = False
+    z_auto_focus = False
     offset_step_small = 2
     offset_step_large = 8
     binsize_param = 2 if 'binsize' not in all_states else all_states['binsize']
@@ -257,6 +259,9 @@ def main():
     ui_interpolation_tracking = ZInterpolationTracking(state=interpolation_tracking)
     elements.append(ui_interpolation_tracking)
 
+    ui_z_auto_focus = ZAutoFocus(state=z_auto_focus)
+    elements.append(ui_z_auto_focus)
+
     ui_tracking_model = ModelsCombo(
         text="Tracking Model",
         key="tracking_model",
@@ -365,6 +370,8 @@ def main():
             sg.HorizontalSeparator(),
         ],[
             *ui_interpolation_tracking.elements, sg.VSeparator(), *ui_tracker_z_offset.elements, sg.VSeparator(), *ui_tracking_model.elements
+        ],[
+            *ui_z_auto_focus.elements,
         ],[
             sg.HorizontalSeparator(),
         ],[

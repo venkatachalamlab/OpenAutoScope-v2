@@ -649,6 +649,44 @@ class ZInterpolationTracking(AbstractElement):
             'p3': self.p3_is_set,
         }
 
+
+class ZAutoFocus(AbstractElement):
+    def __init__(self, state) -> None:
+        super().__init__()
+        self.key = "ZAUTOFOCUS"
+        self.key_checkbox = f"{self.key}-CHECKBOX"
+
+        self.checkbox = sg.Checkbox(
+            text="Z-AutoFocus Tracking",
+            key=self.key_checkbox,
+            enable_events=True,
+            default=state,
+            background_color=BACKGROUND_COLOR,
+            s=39
+        )
+
+        self.elements = [
+            self.checkbox,
+        ]
+        self.events = {
+            self.key_checkbox,
+        }
+
+    def handle(self, **kwargs):
+        event = kwargs['event']
+        if event == self.key_checkbox:
+            client_cli_cmd = "DO _tracker_set_z_autofocus_tracking {}".format(int(self.checkbox.get()))
+            self.client.process(client_cli_cmd)
+
+
+    def add_values(self, values):
+        values[self.key] = self.get()
+
+    def get(self):
+        return {
+            'checkbox': self.checkbox.get(),
+        }
+
 class ModelsCombo(AbstractElement):
     def __init__(self, text: str, key: str, fp) -> None:
         super().__init__()

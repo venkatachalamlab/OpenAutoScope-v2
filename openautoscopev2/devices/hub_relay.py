@@ -165,6 +165,8 @@ class WormTrackerHub(Hub):
 
     def _tracker_interpolate_z_tracking(self, yes_no):
         self.send("tracker_behavior interpolate_z_tracking {}".format(yes_no))
+    def _tracker_set_z_autofocus_tracking(self, yes_no):
+        self.send("tracker_behavior set_z_autofocus_tracking {}".format(yes_no))
 
     def _flir_camera_set_region_behavior(self, z, y, x, b, offsety, offsetx):
         self.send("FlirCameraBehavior set_region {} {} {} {} {} {}".format(z, y, x, b, offsety, offsetx))
