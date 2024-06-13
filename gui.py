@@ -461,11 +461,18 @@ def main():
         for element in elements:
             element.add_values(values)
         
+        # Get & update images
         img_r, img_g = dual_displayer.get_frame()
         frame_r = cv.imencode('.png', img_r)[1].tobytes()
         frame_g = cv.imencode('.png', img_g)[1].tobytes()
         window['img_frame_r'].update(data=frame_r)
         window['img_frame_g'].update(data=frame_g)
+
+        # Get & update the focus
+        # TODO add the focus update here later! possibly
+
+        # TODO: show more stats about the imageing
+        # e.g. stepper motor positions, ...
 
     window.close()
 

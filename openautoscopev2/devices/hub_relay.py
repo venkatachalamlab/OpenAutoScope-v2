@@ -78,9 +78,16 @@ class WormTrackerHub(Hub):
 
     def _teensy_commands_reset_leds(self):
         self.send("teensy_commands reset_leds")
+        led_state = 0
+        for led_name in ['o', 'g']:  # except Behavior/IR led toggles
+            self.send("writer_behavior set_led_state {} {}".format( led_name, led_state ))
+            self.send("writer_gcamp set_led_state {} {}".format( led_name, led_state ))
 
     def _teensy_commands_set_led(self, led_name, state):
         self.send("teensy_commands set_led {} {}".format(led_name, state))
+        if led_name != 'b':  # except Behavior/IR led toggles
+            self.send("writer_behavior set_led_state {} {}".format( led_name, state ))
+            self.send("writer_gcamp set_led_state {} {}".format( led_name, state ))
 
     def _teensy_commands_get_curr_pos(self, name):
         self.send("teensy_commands get_curr_pos {}".format(name))

@@ -29,6 +29,7 @@ import os
 from os.path import join, exists
 from typing import Tuple
 import multiprocessing
+from collections import defaultdict
 
 import zmq
 from docopt import docopt
@@ -58,7 +59,9 @@ class  WriteSession(multiprocessing.Process):
         self.device_status = 1
         self.subscription_status = 0
         self.max_frames_per_file = 3*60*20
-        self.STORE_EVERY_N_FRAMES = 1
+        self.STORE_EVERY_N_FRAMES = 10  # Long-term imagings
+        # self.STORE_EVERY_N_FRAMES = 1
+        self.led_states = defaultdict(bool)
 
         self.name = name
         self.video_name = video_name
@@ -96,6 +99,21 @@ class  WriteSession(multiprocessing.Process):
     @property
     def filename(self) -> str:
         return join( self.fp_base, str(self.file_idx).zfill(6)+".h5" )
+    @property
+    def any_led_on(self) -> bool:
+        if len(self.led_states) == 0:
+            return False
+        for led_name, is_on in self.led_states.items():
+            if is_on:
+                return True
+        return False
+    def set_led_state(self, led_name, led_state):
+        if led_name == 'b':  # except Behavior/IR led toggles
+            return
+        assert type(led_state) in { int, bool }, "Unhandled `led_state` type! should be int or bool. <{}>: {}".format( type(led_state) , led_state )
+        is_on = led_state > 0 if isinstance(led_state, int) else led_state
+        self.led_states[led_name] = is_on
+        return
 
     def start(self):
         if not self.subscription_status:
@@ -135,7 +153,7 @@ class  WriteSession(multiprocessing.Process):
                 msg = self.data_subscriber.get_last()
                 if self.subscription_status and msg is not None:
                     if self.n_frames_this_file < self.max_frames_per_file:
-                        if (self.n_frames_this_file%self.STORE_EVERY_N_FRAMES) == 0:
+                        if self.any_led_on or ( (self.n_frames_this_file%self.STORE_EVERY_N_FRAMES) == 0 ):
                             self.writer.append_data(msg)
                         self.n_frames_this_file += 1
                     else:
