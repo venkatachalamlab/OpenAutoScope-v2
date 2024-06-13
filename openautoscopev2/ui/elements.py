@@ -106,6 +106,9 @@ class InputAutoselect(AbstractElement):
     def get(self):
         raw = self.input.get()
         if not isinstance(raw, str):
+            # If user inputs '-' before writing anything else
+            if raw.replace('-', '').strip() == '':
+                return self.type_caster(0)
             return self.type_caster(raw)
 
         if raw.strip() == "":
@@ -113,9 +116,12 @@ class InputAutoselect(AbstractElement):
 
         sign = "-" if raw[0] == "-" else ""
         res = sign + "".join([
-            c for c in raw if c.isdigit()
+            c for c in raw if c.isdigit() or (self.type_caster == float and c=='.')  # TODO: This will fail if input is not correct! add better handling.
         ])
-        return self.type_caster( res )
+        # If user inputs '-' before writing anything else
+        if res.replace('-', '').strip() == '':
+            return self.type_caster(self.bound_lower)
+        return self.type_caster(res)
 
     def set_bounds(self, bound_lower=None, bound_upper=None):
         if bound_lower is not None:
