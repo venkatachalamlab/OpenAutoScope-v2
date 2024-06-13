@@ -92,6 +92,7 @@ class TrackerDevice():
         self.y_worm = self.shape[0]//2
         self.x_worm = self.shape[1]//2
         self.z_worm_focus = None
+        self.z_worm_focus_offset = 0.0
         self.pid_controller = PIDController(Kpy=10, Kpx=10, Kiy=0, Kix=0, Kdy=0, Kdx=0, SPy=self.shape[0]//2, SPx=self.shape[1]//2)
 
         self.trackedworm_size = None
@@ -180,7 +181,7 @@ class TrackerDevice():
             vz_estimated = None
         else:
             # Estimate Z-AutoFocus and add offset
-            z_focus_offsetted = self.z_worm_focus + 0.0  # This is where we want the focus to be locked. positive values -> darker worm, I think more visible pharynx
+            z_focus_offsetted = self.z_worm_focus + self.z_worm_focus_offset  # This is where we want the focus to be locked. positive values -> darker worm, I think more visible pharynx
             vz_estimated = np.clip(
                 z_focus_offsetted * self.VZ_MAX * 2,
                 -2*self.VZ_MAX, 2*self.VZ_MAX
@@ -315,6 +316,10 @@ class TrackerDevice():
             self.z_autofocus_tracking = yes_no == 1
         else:
             self.z_autofocus_tracking = yes_no.lower() == 'true'
+        return
+    
+    def set_z_autofocus_tracking_offset(self, offset):
+        self.z_worm_focus_offset = float(offset)
         return
 
     def _run(self):

@@ -655,6 +655,7 @@ class ZAutoFocus(AbstractElement):
         super().__init__()
         self.key = "ZAUTOFOCUS"
         self.key_checkbox = f"{self.key}-CHECKBOX"
+        self.key_offset = f"{self.key}-OFFSET"
 
         self.checkbox = sg.Checkbox(
             text="Z-AutoFocus Tracking",
@@ -664,18 +665,39 @@ class ZAutoFocus(AbstractElement):
             background_color=BACKGROUND_COLOR,
             s=39
         )
+        self.input_as = InputAutoselect(
+            key=self.key_offset, default_text="0.0", size=6, type_caster=float,
+            bounds=[-0.1, 0.1]
+        )
 
         self.elements = [
             self.checkbox,
+            *self.input_as.elements
         ]
         self.events = {
             self.key_checkbox,
+            self.key_offset,
         }
 
     def handle(self, **kwargs):
         event = kwargs['event']
+        # Checkbox Toggling
         if event == self.key_checkbox:
             client_cli_cmd = "DO _tracker_set_z_autofocus_tracking {}".format(int(self.checkbox.get()))
+            self.client.process(client_cli_cmd)
+        # Text Input handle
+        if event == self.key_offset:
+            self.input_as.handle(**kwargs)
+        # Turned ON or new offset value
+        if self.checkbox.get() and (
+                event == self.key_checkbox or
+                event == self.key_offset
+            ):  # I know at the moment the second condition is always true! :P
+            z_autofocus_offset = self.get()['offset']
+            # Set the offset value!
+            client_cli_cmd = "DO _tracker_set_z_autofocus_tracking_offset {}".format(
+                z_autofocus_offset
+            )
             self.client.process(client_cli_cmd)
 
 
@@ -685,7 +707,17 @@ class ZAutoFocus(AbstractElement):
     def get(self):
         return {
             'checkbox': self.checkbox.get(),
+            'offset': self.input_as.get(),
         }
+
+    def add_state(self, all_states):
+        self.input_as.add_state(all_states)
+
+    def load_state(self, all_states):
+        self.input_as.load_state(all_states)
+        self.handle({
+            self.key: self.get()
+        })
 
 class ModelsCombo(AbstractElement):
     def __init__(self, text: str, key: str, fp) -> None:
