@@ -29,6 +29,8 @@ Options:
                                             [default: 10000.0]
     --frame_rate=NUMBER                 Frame rate.
                                             [default: 19]
+    --gain=NUMBER                 Camera signal gain. Default -1.0 means continuous automatic gain adjusment by the camera.
+                                            [default: -1.0]
 """
 
 import json
@@ -40,7 +42,7 @@ from docopt import docopt
 
 from openautoscopev2.zmq.publisher import Publisher as Publisher
 from openautoscopev2.zmq.subscriber import ObjectSubscriber
-from openautoscopev2.zmq.array import Publisher as Array_Publisher
+from openautoscopev2.zmq.array import TimestampedPublisher as Timestamped_Array_Publisher
 from openautoscopev2.zmq.utils import parse_host_and_port
 
 
@@ -58,6 +60,7 @@ class  FlirCamera():
             height: int,
             exposure_time: float,
             frame_rate: float,
+            gain: float,
             name="flircamera"):
         
 
@@ -73,6 +76,8 @@ class  FlirCamera():
         self.running = None
         self.depth, self.height, self.width, self.binsize = None, None, None, None
         self.exposure_time, self.frame_rate = None, None
+        self.gain = gain
+        self.gain_mode = 'UNSET'
 
         self.command_subscriber = ObjectSubscriber(
             obj=self,
@@ -86,7 +91,7 @@ class  FlirCamera():
             port=status_out[1],
             bound=status_out[2])
 
-        self.data_publisher = Array_Publisher(
+        self.data_publisher = Timestamped_Array_Publisher(
             host=data_out[0],
             port=data_out[1],
             bound=data_out[2],
@@ -108,6 +113,8 @@ class  FlirCamera():
         self.status["rate"] = self.frame_rate
         self.status["running"] = self.running
         self.status["device"] = self.device
+        self.status["gain"] = self.gain
+        self.status["gain_mode"] = self.gain_mode
 
     def publish_status(self):
         self.update_status()
@@ -138,6 +145,21 @@ class  FlirCamera():
                 node_exposure_mode.SetIntValue(node_exposure_mode.GetEntryByName('Timed').GetValue())
                 node_exposure_auto = PySpin.CEnumerationPtr(nodemap.GetNode('ExposureAuto'))
                 node_exposure_auto.SetIntValue(node_exposure_auto.GetEntryByName('Off').GetValue())
+                # GFP camera Gain OFF
+                if 'gfp' in self.name.lower() or 'gcamp' in self.name.lower():
+                    node_gain_auto = PySpin.CEnumerationPtr(nodemap.GetNode('GainAuto'))
+                    node_gain_auto.SetIntValue(node_gain_auto.GetEntryByName('Off').GetValue())
+                    self.gain_mode = 'Off-constant'
+                    node_gain_value = PySpin.CFloatPtr(nodemap.GetNode('Gain'))
+                    self.gain = node_gain_value.GetMax() if self.gain < 0.0 else round(float(self.gain),2)
+                    self.gain = min( self.gain, node_gain_value.GetMax()-0.01 )  # Make sure we don't go beyond the max
+                    node_gain_value.SetValue(self.gain)
+                else:  # Behavior or other cameras
+                    node_gain_auto = PySpin.CEnumerationPtr(nodemap.GetNode('GainAuto'))
+                    node_gain_auto.SetIntValue(node_gain_auto.GetEntryByName('Continuous').GetValue())
+                    self.gain_mode = 'Continuous-changing'
+                    self.gain = -1.0
+
 
                 node_binning_horizontal = PySpin.CIntegerPtr(nodemap.GetNode('BinningHorizontal'))
                 node_binning_vertical = PySpin.CIntegerPtr(nodemap.GetNode('BinningVertical'))
@@ -345,7 +367,9 @@ def main():
         height=int(args["--height"]),
         exposure_time=float(args["--exposure_time"]),
         frame_rate=float(args["--frame_rate"]),
-        name=args["--name"])
+        gain=float(args["--gain"]),
+        name=args["--name"]
+    )
 
     if flir_camera.initiated:
         flir_camera.run()

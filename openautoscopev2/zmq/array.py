@@ -54,9 +54,9 @@ class Publisher():
 class TimestampedPublisher(Publisher):
     """This publishes arrays after appending timestamps as float64s."""
 
-    def send(self, data):
+    def send(self, data, timestamp: float = None):
         """Publish a time stamped array."""
-        data = push_timestamp(bytes(data))
+        data = push_timestamp(bytes(data), timestamp)
         self.socket.send(data)
 
 class Subscriber():

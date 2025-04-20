@@ -101,6 +101,12 @@ class WormTrackerHub(Hub):
     def _teensy_commands_set_pos(self, name, i, x, y, z):
         self.send("{} set_pos {} {} {} {}".format(name, i, x, y, z))
 
+    # This convention/function names are from `GUIClient`
+    def _teensy_commands_ping(self, name):
+        self.send("teensy_commands ping_position {}".format(name))
+    def _teensy_commands_pong(self, name, x, y, z, vx, vy, vz):
+        self.send("{} set_stage_coordinates {} {} {} {} {} {}".format(name, x, y, z, vx, vy, vz))
+
     def _teensy_commands_enable(self):
         self.send("teensy_commands enable")
 
@@ -156,6 +162,9 @@ class WormTrackerHub(Hub):
 
     def _tracker_set_tracking_mode(self, tracking_mode):
         self.send("tracker_behavior set_tracking_mode {}".format(tracking_mode))
+
+    def _tracker_set_focus_mode(self, focus_mode):
+        self.send("tracker_behavior set_focus_mode {}".format(focus_mode))
 
     def _tracker_start(self):
         self.send("tracker_behavior start")

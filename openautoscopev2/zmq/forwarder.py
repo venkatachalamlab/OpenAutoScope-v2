@@ -15,6 +15,8 @@ Options:
                           [default: 5000]
     --outbound=PORT       Binding for outbound messages.
                           [default: 5001]
+    --control=PORT        Binding for outbound messages.
+                          [default: 4862]
 """
 
 import signal
@@ -24,7 +26,7 @@ import threading
 import zmq
 from docopt import docopt
 
-def run_proxy(inbound, outbound, context):
+def run_proxy(inbound, outbound, control, context):
 
     inbound_socket = context.socket(zmq.XSUB)
     inbound_socket.bind("tcp://*:{}".format(inbound))
@@ -33,7 +35,7 @@ def run_proxy(inbound, outbound, context):
     outbound_socket.bind("tcp://*:{}".format(outbound))
 
     control_socket = context.socket(zmq.SUB)
-    control_socket.connect("tcp://localhost:4862")
+    control_socket.connect(f"tcp://localhost:{control}")
     control_socket.setsockopt(zmq.SUBSCRIBE, b"")
 
     try:
@@ -49,6 +51,7 @@ def main():
 
     inbound = int(args["--inbound"])
     outbound = int(args["--outbound"])
+    control = int(args["--control"])
 
     context = zmq.Context.instance()
 
@@ -60,7 +63,7 @@ def main():
 
     proxy_thread = threading.Thread(
         target=run_proxy,
-        args=(inbound, outbound, context)
+        args=(inbound, outbound, control, context)
     )
     proxy_thread.start()
     proxy_thread.join()

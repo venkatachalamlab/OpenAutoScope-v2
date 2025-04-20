@@ -38,19 +38,19 @@ from typing import Tuple
 
 
 import zmq
-import cv2
+import cv2 as cv
 import numpy as np
 from docopt import docopt
 from openautoscopev2.devices.pid_controller import PIDController
-from openautoscopev2.devices.tracker_tools import Detector
+from openautoscopev2.devices.tracker_tools import TrackerModels
 
-from openautoscopev2.zmq.array import TimestampedPublisher, Subscriber
+from openautoscopev2.zmq.array import TimestampedPublisher, TimestampedSubscriber
 from openautoscopev2.zmq.publisher import Publisher
 from openautoscopev2.zmq.subscriber import ObjectSubscriber
 from openautoscopev2.zmq.utils import parse_host_and_port
 from openautoscopev2.devices.utils import array_props_from_string
 
-class TrackerDevice():
+class TrackerDevice:
 
     def __init__(
             self,
@@ -87,13 +87,16 @@ class TrackerDevice():
         (dtype, _, self.shape) = array_props_from_string(fmt)
         self.data = np.zeros(self.shape)
 
-        self.detect = lambda img: img
-        self.detector = Detector(tracker=self, gui_fp=gui_fp)
+        self.detector = TrackerModels(tracker=self, gui_fp=gui_fp)
         self.y_worm = self.shape[0]//2
         self.x_worm = self.shape[1]//2
         self.z_worm_focus = None
         self.z_worm_focus_offset = 0.0
-        self.pid_controller = PIDController(Kpy=10, Kpx=10, Kiy=0, Kix=0, Kdy=0, Kdx=0, SPy=self.shape[0]//2, SPx=self.shape[1]//2)
+        self.pid_controller = PIDController(
+            Kpy=10, Kpx=10, Kiy=0, Kix=0, Kdy=0, Kdx=0,
+            SPy=self.shape[0]//2, SPx=self.shape[1]//2
+        )
+        self.verbose_z_focus_counter = 0
 
         self.trackedworm_size = None
         self.trackedworm_center = None
@@ -128,13 +131,13 @@ class TrackerDevice():
             port=commands_in[1],
             bound=commands_in[2])
 
-        self.data_subscriber = Subscriber(
+        self.data_subscriber = TimestampedSubscriber(
             host=data_in[0],
             port=data_in[1],
             bound=data_in[2],
             shape=self.shape,
             datatype=dtype)
-        
+
         self.poller = zmq.Poller()
         self.poller.register(self.command_subscriber.socket, zmq.POLLIN)
         self.poller.register(self.data_subscriber.socket, zmq.POLLIN)
@@ -177,7 +180,7 @@ class TrackerDevice():
     
     def _estimate_vz_by_z_autofocus(self):
         if self.z_worm_focus is None:
-            print("NOT WORKING!")  # DEBUG
+            print("NOT WORKING! Select a Z-Focus model before enabling z-focus.")
             vz_estimated = None
         else:
             # Estimate Z-AutoFocus and add offset
@@ -190,8 +193,10 @@ class TrackerDevice():
             # If close to good focus, stop movement
             if np.abs(z_focus_offsetted) < 0.05:  # This is the sensitivity to stay around the focus value -> higher means less accurate focus and less frequent movements, lower means higher accuracy of focus but lost of small movements
                 vz_estimated = 0
-            # DEBUG
-            print(f"Z Focus: {self.z_worm_focus:>.3f} | Offsetted: {z_focus_offsetted:>.3f} | V_z: {vz_estimated:>6d}")
+            self.verbose_z_focus_counter += 1
+            if self.verbose_z_focus_counter%30 == 0:
+                print(f"Z Focus: {self.z_worm_focus:>.3f} | Offsetted: {z_focus_offsetted:>.3f} | V_z: {vz_estimated:>6d}")
+                self.verbose_z_focus_counter = 0
         return vz_estimated
 
     def get_curr_pos(self):
@@ -205,21 +210,43 @@ class TrackerDevice():
     def set_offset_z(self, offset_z):
         self.offset_z = offset_z
         self._send_log(f"offset-z changed to {self.offset_z}")
+    
+    def detect(self, img):
+        img_annotated = self.detector.detect(img)
+        return img_annotated
 
     def set_tracking_mode(self, tracking_mode):
-        self.detect = self.detector.__getattribute__(tracking_mode)
+        """
+        Sina: this will be changed in the future to let the `tracking_tools` be a separate device and does not require a relay like this.
+        """
+        try:
+            self.detector.set_tracking_mode( tracking_mode=tracking_mode )
+        except Exception as e:
+            print("Unable to load tracking models.")
+            print("### Error:\n\n" + str(e))
+        return
+    def set_focus_mode(self, focus_mode):
+        """
+        Sina: this will be changed in the future to let the `tracking_tools` be a separate device and does not require a relay like this.
+        """
+        try:
+            self.detector.set_focus_mode( focus_mode=focus_mode )
+        except Exception as e:
+            print("Unable to load tracking models.")
+            print("### Error:\n\n" + str(e))
+        return
 
     def _process(self):
-        msg = self.data_subscriber.get_last()
+        msg_timestamp, msg = self.data_subscriber.get_last()
         if msg is not None:
             self.data = msg[:,::-1] if self.flip_image else msg
         else:
             return
         
-        self.data_publisher_writer.send(self.data)
+        self.data_publisher_writer.send(self.data, msg_timestamp)
 
-        if self.data.shape == (256, 256):
-            data = cv2.resize(self.data, (512, 512), interpolation=cv2.INTER_LINEAR)
+        if tuple(self.data.shape) != (512, 512):
+            data = cv.resize(self.data, (512, 512), interpolation=cv.INTER_AREA)
         else:
             data = self.data
 
@@ -229,9 +256,10 @@ class TrackerDevice():
 
         img_annotated = self.detect(data)
 
-        if self.shape[0] == 256:
-            self.x_worm //= 2
-            self.y_worm //= 2
+        if self.shape[0] != 512:
+            _factor = int(self.shape[0]/512)
+            self.x_worm = _factor*self.x_worm if self.x_worm is not None else self.x_worm
+            self.y_worm = _factor*self.y_worm if self.y_worm is not None else self.y_worm
 
         self.data_publisher_displayer.send(img_annotated)
 

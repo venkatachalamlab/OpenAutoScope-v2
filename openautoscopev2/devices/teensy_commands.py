@@ -39,7 +39,8 @@ class TeensyCommandsDevice():
         "disable":"sf\n",
         "enable":"sn\n",
         "set_led":"l{led_name}{state}\n",
-        "set_motor_limit": "m{motor}{direction}"
+        "set_motor_limit": "m{motor}{direction}",
+        "ping": "ping\n",
         }
 
     def __init__(
@@ -109,11 +110,15 @@ class TeensyCommandsDevice():
     def get_pos(self, name, i):
         self._execute("get_pos")
         self.status_publisher.send(f"hub _teensy_commands_set_pos {name} {i} {self.x} {self.y} {self.z}")
-    
+
     def get_curr_pos(self, name):
         self._execute("get_pos")
         self.status_publisher.send(f"hub _teensy_commands_set_curr_pos {name} {self.x} {self.y} {self.z}")
-    
+
+    def ping_position(self, name):
+        self._execute("get_pos")
+        self.status_publisher.send(f"hub _teensy_commands_pong {name} {self.x} {self.y} {self.z} {self.vx} {self.vy} {self.vz}")
+
     @property
     def x(self):
         return self.coords[0]

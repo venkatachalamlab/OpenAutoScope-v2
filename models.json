@@ -1,7 +1,28 @@
 {
-    "default": "using tacker with this model does not result in any detection/tracking",
-    "xy4x": "uses threshold filtering with otsu algorithm and size of connected components",
-    "xy10x": "uses the network trained on 17000 frames",
-    "xy10x_all": "uses the network trained on 220000 frames for all 5 stages",
-    "xy10x_all_with_noise": "uses the network trained on 220000 frames for all 5 stages, trained with noisy patterns added"
+    "tracking_xy_threshold": {
+        "dsecription": "uses threshold filtering with otsu algorithm and size of connected components",
+        "path": ""
+    },
+    "tracking_xy10x_all_with_highnoise_SCL_L1": {
+        "dsecription": "uses the network trained on 220000 frames for all 5 stages, trained with high-noisy patterns added, trained for 4 days with L1 loss",
+        "path": "openautoscopev2/models/10x_20241017_DepNet16SC_dropout000_datasetfinal_high_noised_L1_lr1e3_318.onnx"
+    },
+    "tracking_xy10x_all_with_highnoise_SCL_L2": {
+        "dsecription": "uses the network trained on 220000 frames for all 5 stages, trained with high-noisy patterns added, trained for 4 days with L2 loss",
+        "path": "openautoscopev2/models/10x_20241017_DepNet16SC_dropout000_datasetfinal_high_noised_350.onnx"
+    },
+    "tracking_xy4x_all_with_noise": {
+        "dsecription": "uses the network trained on 64000 frames from many stages on/off food, with high noise patterns added to it. annotation was done semi-automatically based on myo-2::GFP patterns.",
+        "path": "openautoscopev2/models/4x_all_with_noise.onnx"
+    },
+    "focus_4x": {
+        "dsecription": "focus model for keeping the worm in focus with 4x new objective! :D,TODO: write actual model training specs",
+        "path": "openautoscopev2/models/4x_all_focus_with_noise.onnx",
+        "sign": -1
+    },
+    "focus_10x": {
+        "dsecription": "focus model for keeping the worm in focus with 10x olympus! :D,TODO: write actual model training specs",
+        "path": "openautoscopev2/models/10x_20241017_DepNet16FocusSC_dropout000_high_noised_L1_lr1e2_444.onnx",
+        "sign": 1
+    }
 }

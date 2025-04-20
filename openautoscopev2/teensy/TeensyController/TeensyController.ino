@@ -38,7 +38,7 @@ long ylimp=45000.0;
 long zlimp=0.0; // Original value: 0.0
 long xlimn=-45000.0;
 long ylimn=-45000.0;
-long zlimn=-30000.0;
+long zlimn=-90000.0;  // Original value: -30000.0
 long vx, vy, vz;
 char *comBuf;
 int nChar;

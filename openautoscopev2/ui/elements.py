@@ -48,7 +48,7 @@ class AbstractElement:
                 element.update(disabled=False)
             except Exception as e:
                 pass
-    
+
     def set_client(self, client: GUIClient):
         self.client = client
 
@@ -352,6 +352,95 @@ class InputWithIncrements(AbstractElement):
             self.key: self.get()
         })
 
+class InitializeExperiment(AbstractElement):
+    def __init__(
+            self,
+            key: str
+        ) -> None:
+        super().__init__()
+        self.experiment = None
+        self.key = key
+        self.button = sg.Button(
+            button_text="Load FoodPatch Scans/Start Experiment",
+            key=self.key,
+            enable_events=True,
+            disabled=False,
+            button_color=BUTTON_COLOR
+        )
+        self.elements = [
+            self.button
+        ]
+        self.events = {
+            self.key
+        }
+        return
+
+    def set_experiment(self, experiment):
+        self.experiment = experiment
+        self.button.update(text = f"{self.experiment.initialization_text}")
+        return
+
+    def handle(self, **kwargs):
+        event = kwargs['event']
+        if event == self.key:
+            fp_folder = kwargs['data_directory'] if 'data_directory' in kwargs else None
+            self.experiment.initialize(fp_folder)
+
+    def add_values(self, values):
+        values[self.key] = self.get()
+
+    def get(self):
+        return self.experiment.is_initialized
+
+class ExperimentArguments(AbstractElement):
+    def __init__(self) -> None:
+        super().__init__()
+        self.experiment = None
+        self.key = "EXPERIMENTARGUMENTS"
+        self.text = sg.Text("Experiment argument", background_color=BACKGROUND_COLOR)
+        self.input_as = InputAutoselect(
+            key=self.key, default_text="0.0", size=9, type_caster=float,
+            bounds=[0.0, None]
+        )
+
+        self.elements = [
+            self.text,
+            *self.input_as.elements
+        ]
+        self.events = {self.key}
+    
+    def set_experiment(self, experiment):
+        self.experiment = experiment
+        self.experiment_has_arguments = hasattr(self.experiment, 'set_arguments')
+        if hasattr(self.experiment, 'arguments_text'):
+            self.text.update(f"{self.experiment.arguments_text}")
+        return
+
+    def handle(self, **kwargs):
+        if self.experiment is not None:
+            self.input_as.handle(**kwargs)
+            if self.experiment_has_arguments:
+                self.experiment.set_arguments(**{
+                    'value': self.get()
+                })
+        return
+
+
+    def add_values(self, values):
+        values[self.key] = self.get()
+
+    def get(self):
+        return self.input_as.get()
+
+    def add_state(self, all_states):
+        self.input_as.add_state(all_states)
+
+    def load_state(self, all_states):
+        self.input_as.load_state(all_states)
+        self.handle({
+            self.key: self.get()
+        })
+
 class LED(AbstractElement):
     def __init__(
             self,
@@ -366,6 +455,8 @@ class LED(AbstractElement):
         self.key = key
         self.led_name = self.key.split("_")[1]
         self.key_toggle = f"{self.key}-TOGGLE"
+        self.key_set_on = f"{self.key}-ON"
+        self.key_set_off = f"{self.key}-OFF"
         self.button = sg.Button(
             image_data=self.icon_off,
             image_size=self.icon_size,
@@ -380,7 +471,9 @@ class LED(AbstractElement):
             self.button, self.text
         ]
         self.events = {
-            self.key_toggle
+            self.key_toggle,
+            self.key_set_on,
+            self.key_set_off,
         }
         self.state = False
 
@@ -388,11 +481,16 @@ class LED(AbstractElement):
         event = kwargs['event']
         if event == self.key_toggle:
             self.state = not self.state
-            image_data = self.icon_on if self.state else self.icon_off
-            self.button.update(image_data=image_data)
-            
-        state = 1 if self.state else 0
-        client_cli_cmd = f"DO _teensy_commands_set_led {self.led_name} {state}"
+        elif event == self.key_set_on:
+            self.state = True
+        elif event == self.key_set_off:
+            self.state = False
+        # Update icon based on state
+        image_data = self.icon_on if self.state else self.icon_off
+        self.button.update(image_data=image_data)
+        # Send LED state to teensy
+        state_int = 1 if self.state else 0
+        client_cli_cmd = f"DO _teensy_commands_set_led {self.led_name} {state_int}"
         self.client.process(client_cli_cmd)
 
     def add_values(self, values):
@@ -767,13 +865,19 @@ class WriteEveryNFrames(AbstractElement):
             self.key: self.get()
         })
 
-class ModelsCombo(AbstractElement):
+
+######################################################################
+class TrackingModelsCombo(AbstractElement):
     def __init__(self, text: str, key: str, fp) -> None:
         super().__init__()
         self.fp_models = os.path.join(fp, 'models.json')
         self.models_dict = jload(self.fp_models)
-        self.models = list(self.models_dict.keys())
-        self.default_value = self.models[0]
+        self.model_names = [ "none", ]  # Only display models for focusing
+        for model_key in self.models_dict:
+            model_type, model_name = model_key.split('_', 1)
+            if model_type == 'tracking':  # <--- filter model type
+                self.model_names.append(model_name)
+        self.default_value = self.model_names[0]
 
         self.key = key
         self.key_combo = f"{self.key}--COMBO"
@@ -784,7 +888,7 @@ class ModelsCombo(AbstractElement):
 
         self.text = sg.Text(text, background_color = BACKGROUND_COLOR)
         self.combo = sg.Combo(
-            values=self.models,
+            values=self.model_names,
             default_value=self.default_value,
             key=self.key_combo,
             enable_events=True,
@@ -814,6 +918,60 @@ class ModelsCombo(AbstractElement):
         self.handle({
             self.key_combo: self.get()
         })
+
+######################################################################
+class FocusModelsCombo(AbstractElement):
+    def __init__(self, text: str, key: str, fp) -> None:
+        super().__init__()
+        self.fp_models = os.path.join(fp, 'models.json')
+        self.models_dict = jload(self.fp_models)
+        self.model_names = [ "none", ]  # Only display models for tracking
+        for model_key in self.models_dict:
+            model_type, model_name = model_key.split('_', 1)
+            if model_type == 'focus':  # <--- filter model type
+                self.model_names.append(model_name)
+        self.default_value = self.model_names[0]
+
+        self.key = key
+        self.key_combo = f"{self.key}--COMBO"
+        self.events = {
+            self.key,
+            self.key_combo
+        }
+
+        self.text = sg.Text(text, background_color = BACKGROUND_COLOR)
+        self.combo = sg.Combo(
+            values=self.model_names,
+            default_value=self.default_value,
+            key=self.key_combo,
+            enable_events=True,
+            s=25,
+            button_background_color=BUTTON_COLOR
+        )
+        self.elements = [ self.text, self.combo ]
+
+    def handle(self, **kwargs):
+        event = kwargs['event']
+        if event == self.key_combo:
+            model = self.get()
+            client_cli_cmd = "DO _tracker_set_focus_mode {}".format(model)
+            self.client.process(client_cli_cmd)
+    
+    def get(self):
+        return self.combo.get()
+
+    def add_values(self, values):
+        values[self.key] = self.get()
+    
+    def add_state(self, all_states):
+        all_states[self.key_combo] = self.get()
+
+    def load_state(self, all_states):
+        self.combo.update(value=all_states[self.key_combo])
+        self.handle({
+            self.key_combo: self.get()
+        })
+
 
 class InputwithIncrementsforZOffset(AbstractElement):
     def __init__(self, text:str, key: str, default_value: int, increments: List[int] = [-1, 1], type_caster=int) -> None:
