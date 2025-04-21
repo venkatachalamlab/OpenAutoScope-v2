@@ -41,7 +41,7 @@ class GUIClient:
         self.socket.connect(address)
 
         # Signaling the proxy -> can start, pause, stop the proxy
-        self.control_socket = self.context.socket(zmq.PUB)
+        self.control_socket = self.context.socket(zmq.PAIR)
         self.control_socket.bind(f"tcp://*:{port_forwarder_control}")
 
         # Make publisher to send commands

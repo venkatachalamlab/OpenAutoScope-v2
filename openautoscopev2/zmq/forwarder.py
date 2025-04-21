@@ -34,9 +34,9 @@ def run_proxy(inbound, outbound, control, context):
     outbound_socket = context.socket(zmq.XPUB)
     outbound_socket.bind("tcp://*:{}".format(outbound))
 
-    control_socket = context.socket(zmq.SUB)
+    control_socket = context.socket(zmq.PAIR)
     control_socket.connect(f"tcp://localhost:{control}")
-    control_socket.setsockopt(zmq.SUBSCRIBE, b"")
+
 
     try:
         zmq.proxy_steerable(inbound_socket, outbound_socket, control=control_socket)
