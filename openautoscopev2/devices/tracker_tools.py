@@ -72,7 +72,7 @@ class TrackerModels:
         img_annotated = img
         # Z focus
         ## Set this parameters: self.tracker.z_worm_focus
-        if self.selected_focus_mode is None or self.selected_focus_mode == "":
+        if self.selected_focus_mode is None or self.selected_focus_mode == "" or self.selected_focus_mode == "none":
             self.tracker.z_worm_focus = None
         else:
             model_key = f"focus_{self.selected_focus_mode}"
@@ -82,7 +82,7 @@ class TrackerModels:
 
         # XY tracking
         ## Set these two: self.tracker.x_worm, self.tracker.y_worm = ort_outs[0][0].astype(np.int64)
-        if self.selected_tracking_mode is None or self.selected_tracking_mode == "":
+        if self.selected_tracking_mode is None or self.selected_tracking_mode == "" or self.selected_tracking_mode == "none":
             self.tracker.x_worm, self.tracker.y_worm = None, None
         elif self.selected_tracking_mode == "xy_threshold":
             img_annotated = self.xy_threshold(img_annotated)
@@ -109,9 +109,13 @@ class TrackerModels:
 
     def set_tracking_mode(self, tracking_mode):
         self.selected_tracking_mode = tracking_mode
+        if tracking_mode == "" or tracking_mode == "none":
+            self.selected_tracking_mode = None
         return
     def set_focus_mode(self, focus_mode):
         self.selected_focus_mode = focus_mode
+        if focus_mode == "" or focus_mode == "none":
+            self.selected_focus_mode = None
         return
 
     def default(self, img):
