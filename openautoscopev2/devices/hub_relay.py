@@ -78,9 +78,16 @@ class WormTrackerHub(Hub):
 
     def _teensy_commands_reset_leds(self):
         self.send("teensy_commands reset_leds")
+        led_state = 0
+        for led_name in ['o', 'g']:  # except Behavior/IR led toggles
+            self.send("writer_behavior set_led_state {} {}".format( led_name, led_state ))
+            self.send("writer_gcamp set_led_state {} {}".format( led_name, led_state ))
 
     def _teensy_commands_set_led(self, led_name, state):
         self.send("teensy_commands set_led {} {}".format(led_name, state))
+        if led_name != 'b':  # except Behavior/IR led toggles
+            self.send("writer_behavior set_led_state {} {}".format( led_name, state ))
+            self.send("writer_gcamp set_led_state {} {}".format( led_name, state ))
 
     def _teensy_commands_get_curr_pos(self, name):
         self.send("teensy_commands get_curr_pos {}".format(name))
@@ -93,6 +100,12 @@ class WormTrackerHub(Hub):
 
     def _teensy_commands_set_pos(self, name, i, x, y, z):
         self.send("{} set_pos {} {} {} {}".format(name, i, x, y, z))
+
+    # This convention/function names are from `GUIClient`
+    def _teensy_commands_ping(self, name):
+        self.send("teensy_commands ping_position {}".format(name))
+    def _teensy_commands_pong(self, name, x, y, z, vx, vy, vz):
+        self.send("{} set_stage_coordinates {} {} {} {} {} {}".format(name, x, y, z, vx, vy, vz))
 
     def _teensy_commands_enable(self):
         self.send("teensy_commands enable")
@@ -134,6 +147,10 @@ class WormTrackerHub(Hub):
         self.send("writer_gcamp set_directory {}".format(directory))
         self.send("writer_behavior set_directory {}".format(directory))
 
+    def _writer_set_write_every_n_frames(self, write_every_n_frames):
+        self.send("writer_behavior set_write_every_n_frames {}".format(write_every_n_frames))
+        self.send("writer_gcamp set_write_every_n_frames {}".format(write_every_n_frames))
+
     def _tracker_set_point(self, i):
         self.send("tracker_behavior set_point {}".format(i))
 
@@ -145,6 +162,9 @@ class WormTrackerHub(Hub):
 
     def _tracker_set_tracking_mode(self, tracking_mode):
         self.send("tracker_behavior set_tracking_mode {}".format(tracking_mode))
+
+    def _tracker_set_focus_mode(self, focus_mode):
+        self.send("tracker_behavior set_focus_mode {}".format(focus_mode))
 
     def _tracker_start(self):
         self.send("tracker_behavior start")
@@ -158,6 +178,12 @@ class WormTrackerHub(Hub):
 
     def _tracker_interpolate_z_tracking(self, yes_no):
         self.send("tracker_behavior interpolate_z_tracking {}".format(yes_no))
+
+    def _tracker_set_z_autofocus_tracking(self, yes_no):
+        self.send("tracker_behavior set_z_autofocus_tracking {}".format(yes_no))
+
+    def _tracker_set_z_autofocus_tracking_offset(self, offset):
+        self.send("tracker_behavior set_z_autofocus_tracking_offset {}".format(offset))
 
     def _flir_camera_set_region_behavior(self, z, y, x, b, offsety, offsetx):
         self.send("FlirCameraBehavior set_region {} {} {} {} {} {}".format(z, y, x, b, offsety, offsetx))

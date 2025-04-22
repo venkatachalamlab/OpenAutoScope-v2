@@ -35,8 +35,8 @@ class PIDController():
 
     def get_velocity(self, y, x):
 
-        Ey = self.SPy - y if not np.isnan(y) and y is not None else self.SPy
-        Ex = self.SPx - x if not np.isnan(x) and x is not None else self.SPx
+        Ey = self.SPy - y if y is not None and not np.isnan(y) else self.SPy
+        Ex = self.SPx - x if x is not None and not np.isnan(x)  else self.SPx
 
         self.Iy = 0.1*Ey + 0.9*self.Iy
         self.Ix = 0.1*Ex + 0.9*self.Ix

@@ -107,10 +107,10 @@ def parse_host_and_port(val: str) -> Tuple[str, int, bool]:
 
     return (host, port, bound)
 
-def push_timestamp(msg: bytes) -> bytes:
+def push_timestamp(msg: bytes, timestamp: float = None) -> bytes:
     """ This prepends a timestamp returned by python's time.time() as a double
     to the buffer specified by msg."""
-    now = struct.pack('d', time.time())
+    now = struct.pack('d', time.time()) if timestamp is None else struct.pack('d', timestamp)
     return msg + now
 
 def pop_timestamp(msg: bytes) -> Tuple[float, bytes]:
