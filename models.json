@@ -24,5 +24,10 @@
         "dsecription": "focus model for keeping the worm in focus with 10x olympus! :D,TODO: write actual model training specs",
         "path": "openautoscopev2/models/10x_20241017_DepNet16FocusSC_dropout000_high_noised_L1_lr1e2_444.onnx",
         "sign": 1
+    },
+    "focus_4x_newlighting": {
+        "dsecription": "focus model for keeping the worm in focus with 4x new objective and new lighting! :D,TODO: write actual model training specs",
+        "path": "openautoscopev2/models/4x_focus_512by512_new_lighting.onnx",
+        "sign": -1
     }
 }
