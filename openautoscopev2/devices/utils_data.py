@@ -180,3 +180,28 @@ class SerializeDatas:
             t -= self.ns[idx]
             idx += 1
         return self.data_list[idx][t]
+## ImgToProcess
+class ImgToProcess:
+    def __init__(self, data, fn_process, rescale=False):
+        self.data = data
+        self.fn_process = fn_process
+        self.rescale = rescale
+        self.shape = self.data.shape
+        _shape_frame = self.fn_process(self.data[0]).shape
+        self.shape = ( self.shape[0], *_shape_frame ) 
+        return
+    def __len__(self):
+        return len(self.data)
+    def __getitem__(self, t):
+        result = self.fn_process( self.data[t] ).astype(np.uint8)
+        if self.rescale and result.max() != 0:
+            result *= (255//result.max())
+        return result
+############################################################################################################
+## Binning
+def change_binning(img, binning):
+    if binning == 1:
+        return img.copy()
+    nx, ny = img.shape
+    nx_new, ny_new = nx//binning, ny//binning
+    return cv.resize(img, (nx_new,ny_new), cv.INTER_AREA)

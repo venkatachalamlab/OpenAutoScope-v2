@@ -8,7 +8,10 @@ from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2 as cv
-from openautoscopev2.devices.utils_data import load_process_log_files, load_files_data_times, SerializeDatas
+from openautoscopev2.devices.utils_data import (
+    load_process_log_files, load_files_data_times, SerializeDatas,
+    change_binning, ImgToProcess
+)
 from openautoscopev2.zmq.client import GUIClient
 
 # Parameters
@@ -50,6 +53,13 @@ def fp_folder_to_combined_frame(fp_folder: str, idx_start: int = 0, include_subf
     _wildcard = os.path.join( fp_folder, "*_behavior" ) if include_subfolders else fp_folder
     files, datas, times = load_files_data_times( _wildcard )
     series = SerializeDatas(datas)
+    ## Change image to 512*512 by binning
+    _, _nx, _ny = series.shape
+    if _nx != 512:
+        _binning = _nx//512
+        def do_img_beh(img):
+            return change_binning(img, _binning)
+        series = ImgToProcess(series, fn_process=do_img_beh)
     n_imgs, nx, ny = series.shape
     times = np.concatenate([ t[:] for t in times ])
     ############################################################
