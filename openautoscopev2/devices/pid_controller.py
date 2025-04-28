@@ -3,6 +3,9 @@
 
 import numpy as np
 
+def is_nan(x):
+    return ( x is None or np.isnan(x) )
+
 
 class PIDController():
 
@@ -16,8 +19,11 @@ class PIDController():
         self.Kix = Kix
         self.Kdx = Kdx
 
-        self.SPy = SPy
-        self.SPx = SPx
+        self.SPx0 = SPx
+        self.SPy0 = SPy
+
+        self.SPy = self.SPx0
+        self.SPx = self.SPy0
         
         self.reset()
         return
@@ -31,9 +37,18 @@ class PIDController():
 
         self.Vy = 0.0
         self.Vx = 0.0
+
+        self.SPy = self.SPx0
+        self.SPx = self.SPy0
         return
 
     def get_velocity(self, y, x):
+
+        # If both coords are None/NaN, stop tracking
+        # and reset to initial parameters
+        if is_nan(x) and is_nan(y):
+            self.reset()
+            return int(-self.Vy), int(self.Vx)
 
         Ey = self.SPy - y if y is not None and not np.isnan(y) else self.SPy
         Ex = self.SPx - x if x is not None and not np.isnan(x)  else self.SPx
