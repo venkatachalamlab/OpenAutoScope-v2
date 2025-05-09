@@ -31,7 +31,7 @@ DIFF_COORDS_TO_PIXELS_4x = np.array([
 MM_PER_PIXEL_4x = 1/410  # Calibrated with 1mm slide, 410 pixels corresponded to 1mm vertically
 MASK_MEDIAN_BLUR_SIZE_4x = 31  # previous 31  TODO: change this, 25 worked
 MASK_THRESHOLD_4x = 2  # 10 before, TODO: change this, 2 worked
-SIZE_SMALLEST_FOREGROUND_4X = 50
+SIZE_SMALLEST_FOREGROUND_4X = 100
 ## Select
 MASK_THRESHOLD = MASK_THRESHOLD_4x
 SIZE_SMALLEST_FOREGROUND = SIZE_SMALLEST_FOREGROUND_4X
@@ -108,7 +108,7 @@ def fp_folder_to_combined_frame(fp_folder: str, idx_start: int = 0, include_subf
         )
         # Mask
         # TODO: numbers set based on 10x, change for 4x?
-        img_blur_small = cv.GaussianBlur(img, (31,31), 2.0).astype(np.float32)
+        img_blur_small = cv.GaussianBlur(img, (31,31), 1.0).astype(np.float32)
         img_blur_large = cv.GaussianBlur(img, (31,31), 5.0).astype(np.float32)
         img_mask = np.abs(img_blur_small - img_blur_large) > MASK_THRESHOLD
         img_mask = img_remove_small_objects(img_mask, size_threshold=SIZE_SMALLEST_FOREGROUND)

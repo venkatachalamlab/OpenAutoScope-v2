@@ -27,7 +27,7 @@
     },
     "focus_4x_newlighting": {
         "dsecription": "focus model for keeping the worm in focus with 10x olympus! :D,TODO: write actual model training specs",
-        "path": "openautoscopev2/models/20250422_ResNetFocus_newlighting_4x_Batch16_SCALE16_DP000_L2_noised_SCALED_lr0001_080.onnx",
+        "path": "openautoscopev2/models/4x_focus_512by512_new_lighting.onnx",
         "sign": -1
     },
     "focus_4x_newlighting_370": {
