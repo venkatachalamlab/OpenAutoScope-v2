@@ -41,7 +41,6 @@ from typing import Tuple
 
 import zmq
 import cv2 as cv
-from skimage import filters
 import numpy as np
 from docopt import docopt
 from openautoscopev2.devices.pid_controller import PIDController
@@ -53,30 +52,9 @@ from openautoscopev2.zmq.utils import parse_host_and_port
 from openautoscopev2.devices.utils import array_props_from_string
 
 
-XY_TRACKING_BLUR_SIZE = 5
-XY_TRACKING_KERNEL_DILATE = np.ones((13,13))
-XY_TRACKING_KERNEL_ERODE = np.ones((7,7))
-XY_TRACKING_SMALLEST_TRACKING_OBJECT = 200
-XY_TRACKING_SIZE_FLUCTUATIONS = 0.25
-XY_TRACKING_CENTER_SPEED = 100
-XY_TRACKING_MASK_KERNEL_BLUR = 5
 
-def minmax(arr):
-    return np.min(arr), np.max(arr)
 
-def img_to_object_mask_threshold(img, threshold):
-    img_blurred = cv.blur(img, (XY_TRACKING_BLUR_SIZE, XY_TRACKING_BLUR_SIZE))
-    img_objects = (img_blurred < threshold).astype(np.float32)
-    img_objects_eroded = cv.erode(img_objects, XY_TRACKING_KERNEL_ERODE).astype(np.float32)
-    img_objects_dilated = cv.dilate(img_objects_eroded, XY_TRACKING_KERNEL_DILATE).astype(np.float32)
-    _, labels, rectangles, _ = cv.connectedComponentsWithStats(img_objects_dilated.astype(np.uint8))
-    for i, rectangle in enumerate(rectangles):
-        _size = rectangle[-1]
-        if _size <= XY_TRACKING_SMALLEST_TRACKING_OBJECT:
-            indices = labels == i
-            labels[indices] = 0
-    mask = labels > 0
-    return mask
+
 
 def is_nan(x):
     return ( x is None or isinstance(x, str) or np.isnan(x) )
@@ -130,6 +108,8 @@ class TrackerDevice:
         self.is_z_worm_set = False
         self.y_worm = self.img_y_center
         self.x_worm = self.img_x_center
+        self.bbox_worm_xmin, self.bbox_worm_xmax = None, None
+        self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
         self.z_worm_focus = None
         self.z_worm_focus_offset = 0.0
         self.pid_controller = PIDController(
@@ -138,8 +118,6 @@ class TrackerDevice:
         )
         self.verbose_z_focus_counter = 0
 
-        self.trackedworm_size = None
-        self.trackedworm_center = None
         self.found_trackedworm = False
 
         self.tracking = False
@@ -191,6 +169,7 @@ class TrackerDevice:
         self.poller.register(self.data_subscriber.socket, zmq.POLLIN)
 
         time.sleep(1)
+        return
 
     def set_point(self, i):
         self.command_publisher.send(f"hub _teensy_commands_get_pos {self.name} {i}")
@@ -259,76 +238,6 @@ class TrackerDevice:
         self.offset_z = offset_z
         self._send_log(f"offset-z changed to {self.offset_z}")
     
-    def track_xy_using_threshold(self, img):
-        # Image size for center finding
-        ny, nx = img.shape[:2]
-        # Threshold for distinguishing foreground and background
-        otsu = filters.threshold_otsu(img)
-        threshold = 1.2 * otsu if otsu > 50 else 110
-        # Mask foreground objects
-        img_mask_objects = img_to_object_mask_threshold(img, threshold=threshold)
-        _ys, _xs = np.where(~img_mask_objects)
-        _, labels, _, centroids = cv.connectedComponentsWithStats(
-            img_mask_objects.astype(np.uint8)
-        )
-        # Find foreground candidates larger than a specific size
-        centroids = centroids[:,::-1]  # swap i-j indices to match with `numpy.where` conventions
-        labels_background = set(labels[_ys, _xs])
-        label_values, label_counts = np.unique(labels.flatten(), return_counts=True)
-        candidates_info = []
-        for label_value, label_count, centroid in zip(label_values, label_counts, centroids):
-            if label_value in labels_background:
-                continue
-            if label_count >= XY_TRACKING_SMALLEST_TRACKING_OBJECT:
-                candidates_info.append([
-                    labels == label_value,
-                    centroid
-                ])
-        # Find closest candidate to center if the size is whithin a range of previous frame size
-        self.found_trackedworm = False
-        img_mask_trackedworm = None
-        _d_center_closest = None
-        if len(candidates_info) > 0:
-            _center_previous = self.trackedworm_center \
-                if self.tracking and self.trackedworm_center is not None else np.array([ny/2, nx/2])
-            _size_lower = self.trackedworm_size*(1.0-XY_TRACKING_SIZE_FLUCTUATIONS) if self.tracking and self.trackedworm_size is not None else 0.0
-            _size_upper = self.trackedworm_size*(1.0+XY_TRACKING_SIZE_FLUCTUATIONS) if self.tracking and self.trackedworm_size is not None else 0.0
-            for _, (mask, center) in enumerate(candidates_info):
-                _size = mask.sum()
-                _d_center = np.max(np.abs(center - _center_previous))
-                is_close_enough = _d_center <= XY_TRACKING_CENTER_SPEED
-                if _size_upper != 0.0:
-                    is_close_enough = is_close_enough and (_size_lower <= _size <= _size_upper)
-                if is_close_enough:
-                    self.found_trackedworm = True
-                    if _d_center_closest is None or _d_center < _d_center_closest:
-                        _d_center_closest = _d_center
-                        img_mask_trackedworm = mask
-                        if self.tracking:
-                                self.trackedworm_size = _size
-                                self.trackedworm_center = center.copy()
-        # If worm is found, annotate the frame by adding a box around the object
-        # img_annotated = cv.circle(
-        #     img, (255, 255),
-        #     radius=2, color=255, thickness=2
-        # )  # add a dot in the center of the image
-        if self.found_trackedworm:
-            img_mask_trackedworm_blurred = cv.blur(
-                img_mask_trackedworm.astype(np.float32),
-                (XY_TRACKING_MASK_KERNEL_BLUR, XY_TRACKING_MASK_KERNEL_BLUR)
-            ) > 1e-4
-            ys, xs = np.where(img_mask_trackedworm_blurred)
-            y_min, y_max = minmax(ys)
-            x_min, x_max = minmax(xs)
-            self.x_worm = (x_min + x_max)//2
-            self.y_worm = (y_min + y_max)//2
-            self.is_xy_worm_set = True
-
-            img_annotated = cv.rectangle(img, (x_min, y_min), (x_max, y_max), 255, 2)
-            return img_annotated
-        # Return the original image in case no worm detected
-        return img
-    
     def detect(self, img):
         # Detect xy-tracking and z-focus
         img_annotated = img.copy()
@@ -361,17 +270,15 @@ class TrackerDevice:
         ## Add Annotations
         ### XY tracking
         if self.tracking_mode is not None:
-            # Do the tracking
-            if self.tracking_mode == "xy_threshold":
-                img_annotated = self.track_xy_using_threshold(img)
-            else:
-                # Add the worm coordinate annotations
-                if not is_nan(self.x_worm) and not is_nan(self.y_worm):
-                    img_annotated = cv.circle(
-                        img_annotated,
-                        (int(self.x_worm), int(self.y_worm)),
-                        radius=10, color=255, thickness=2
-                    )
+            # Add worm bounding box if set
+            if self.tracking_mode == "xy_threshold" and not is_nan(self.bbox_worm_xmin) and not is_nan(self.bbox_worm_ymin):
+                img_annotated = cv.rectangle(img_annotated, (self.bbox_worm_xmin, self.bbox_worm_ymin), (self.bbox_worm_xmax, self.bbox_worm_ymax), 255, 2)
+            elif not is_nan(self.x_worm) and not is_nan(self.y_worm): # Add the worm coordinate annotations
+                img_annotated = cv.circle(
+                    img_annotated,
+                    (int(self.x_worm), int(self.y_worm)),
+                    radius=10, color=255, thickness=2
+                )
             # Add a dot in the center of the image
             img_annotated = cv.circle(
                 img_annotated, (255, 255),
@@ -397,6 +304,22 @@ class TrackerDevice:
             self.x_worm, self.y_worm = x_worm, y_worm
             self.is_xy_worm_set = True
         return
+    def set_boundingbox_worm(self, xmin, xmax, ymin, ymax):
+        if isinstance(xmin, str) or isinstance(xmax, str) or isinstance(ymin, str) or isinstance(ymax, str):
+            self.bbox_worm_xmin, self.bbox_worm_xmax = None, None
+            self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
+            # In XY thresholding method, finding worm means having it's bounding box
+            if self.tracking_mode == "xy_threshold":
+                self.found_trackedworm = False
+        else:
+            self.bbox_worm_xmin = xmin
+            self.bbox_worm_xmax = xmax
+            self.bbox_worm_ymin = ymin
+            self.bbox_worm_ymax = ymax
+            # In XY thresholding method, finding worm means having it's bounding box
+            if self.tracking_mode == "xy_threshold":
+                self.found_trackedworm = True
+        return
     def set_tracking_mode(self, tracking_mode):
         """
         Sina: this will be changed in the future to let the `tracking_tools` be a separate device and does not require a relay like this.
@@ -404,12 +327,10 @@ class TrackerDevice:
         self.tracking_mode = tracking_mode
         if self.tracking_mode.lower() == "none":
             self.x_worm, self.y_worm = None, None
+            self.bbox_worm_xmin, self.bbox_worm_xmax = None, None
+            self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
             self.tracking_mode = None
             self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( None ))
-        elif self.tracking_mode == "xy_threshold":
-            # Send signal to tracking device to stop
-            self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( None ))
-            self.found_trackedworm = False
         else:
             # Send signal to tracking device to start and set mode
             self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( self.tracking_mode ))
@@ -432,13 +353,14 @@ class TrackerDevice:
     def send_img_to_tracking_models(self, img):
         if self.data_publisher_tracking_models is not None:
             # Don't send data over if not necessary
-            if (self.tracking_mode == "xy_threshold" or self.tracking_mode is None) and self.focus_mode is None:
+            if self.tracking_mode is None and self.focus_mode is None:
                 pass
             else:  # Send the image to device and wait for the call-back from there
                 self.data_publisher_tracking_models.send(img)
         return
 
     def _process(self):
+        # Receive last frame
         msg_timestamp, msg = self.data_subscriber.get_last()
         if msg is not None:
             self.data = msg[:,::-1] if self.flip_image else msg
@@ -496,10 +418,8 @@ class TrackerDevice:
         if not self.tracking:
             self._send_log("starting tracking")
             self.missing_worm_idx = 0
-            self.trackedworm_center = None
-            self.trackedworm_size = None
             self.tracking = True
-            # self.command_publisher.send("tracking_models_behavior start_tracking")
+            self.command_publisher.send("tracking_models_behavior start_tracking")
             self.pid_controller.reset()
         return
 
@@ -508,10 +428,8 @@ class TrackerDevice:
             self._set_velocities(0, 0, 0)
             self._send_log("stopping tracking")
             self.missing_worm_idx = 0
-            self.trackedworm_center = None
-            self.trackedworm_size = None
             self.tracking = False
-            # self.command_publisher.send("tracking_models_behavior stop_tracking")
+            self.command_publisher.send("tracking_models_behavior stop_tracking")
             self.pid_controller.reset()
         return
 
