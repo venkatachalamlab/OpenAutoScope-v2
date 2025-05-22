@@ -84,6 +84,9 @@ def parse_host_and_port(val: str) -> Tuple[str, int, bool]:
     *:5000          -> ("*", 5000, True)
     L5000           -> ("localhost", 5000, False)
     """
+    # Special case
+    if val == "0" or val.lower() == "none":
+        return None
 
     parts = val.split(":")
 

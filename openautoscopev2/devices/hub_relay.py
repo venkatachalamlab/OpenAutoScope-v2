@@ -175,6 +175,7 @@ class WormTrackerHub(Hub):
     def _tracker_shutdown(self):
         self.send("tracker_behavior shutdown")
         self.send("tracker_gcamp shutdown")
+        self.send("tracking_models_behavior shutdown")
 
     def _tracker_interpolate_z_tracking(self, yes_no):
         self.send("tracker_behavior interpolate_z_tracking {}".format(yes_no))

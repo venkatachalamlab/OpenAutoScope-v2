@@ -19,6 +19,8 @@ Options:
                                             [default: localhost:5006]
     --data_out_writer=HOST:PORT         Host and Port for the outgoing image to save.
                                             [default: localhost:5007]
+    --data_out_tracking_model=HOST:PORT Host and Port for the outgoing image to tracking model.
+                                            [default: localhost:0]
     --format=UINT8_YX_512_512           Size and type of image being sent.
                                             [default: UINT8_YX_512_512]
     --name=NAME                         Device Name.
@@ -42,13 +44,21 @@ import cv2 as cv
 import numpy as np
 from docopt import docopt
 from openautoscopev2.devices.pid_controller import PIDController
-from openautoscopev2.devices.tracker_tools import TrackerModels
 
 from openautoscopev2.zmq.array import TimestampedPublisher, TimestampedSubscriber
 from openautoscopev2.zmq.publisher import Publisher
 from openautoscopev2.zmq.subscriber import ObjectSubscriber
 from openautoscopev2.zmq.utils import parse_host_and_port
 from openautoscopev2.devices.utils import array_props_from_string
+
+
+
+
+
+
+def is_nan(x):
+    return ( x is None or isinstance(x, str) or np.isnan(x) )
+
 
 class TrackerDevice:
 
@@ -59,6 +69,7 @@ class TrackerDevice:
             data_in: Tuple[str, int, bool],
             data_out_writer: Tuple[str, int],
             data_out_displayer: Tuple[str, int],
+            data_out_tracking_model: Tuple[str, int],
             fmt: str,
             interpolation_tracking:bool,
             z_autofocus_tracking:bool,
@@ -73,6 +84,9 @@ class TrackerDevice:
         self.MISSING_WORM_TOLERANCE = 45
         self.VZ_MAX = 16
 
+        self.TRACKING_RETRACTION_FACTOR_XY = 0.87  # 256*x^40 = 1 -> getting to sub 1 pixel close to image center after 40 frames
+        self.TRACKING_RETRACTION_FACTOR_Z  = 0.93  # x^40 = 0.05 -> getting to sub 0.05 in terms of focus estimation after 40 frames
+
         self.interpolation_tracking = interpolation_tracking.lower() == 'true' if isinstance(interpolation_tracking, str) else interpolation_tracking
         self.z_autofocus_tracking = z_autofocus_tracking.lower() == 'true' if isinstance(z_autofocus_tracking, str) else z_autofocus_tracking
         self.points = np.zeros((3, 3)) * np.nan
@@ -86,20 +100,24 @@ class TrackerDevice:
         self.name = name
         (dtype, _, self.shape) = array_props_from_string(fmt)
         self.data = np.zeros(self.shape)
+        self.img_y_center, self.img_x_center = 256, 256  # Hard-coded 512*512 displayer size and resizing before tracking
 
-        self.detector = TrackerModels(tracker=self, gui_fp=gui_fp)
-        self.y_worm = self.shape[0]//2
-        self.x_worm = self.shape[1]//2
+        self.tracking_mode = None
+        self.focus_mode = None
+        self.is_xy_worm_set = False
+        self.is_z_worm_set = False
+        self.y_worm = self.img_y_center
+        self.x_worm = self.img_x_center
+        self.bbox_worm_xmin, self.bbox_worm_xmax = None, None
+        self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
         self.z_worm_focus = None
         self.z_worm_focus_offset = 0.0
         self.pid_controller = PIDController(
             Kpy=10, Kpx=10, Kiy=0, Kix=0, Kdy=0, Kdx=0,
-            SPy=self.shape[0]//2, SPx=self.shape[1]//2
+            SPy=self.img_y_center, SPx=self.img_x_center
         )
         self.verbose_z_focus_counter = 0
 
-        self.trackedworm_size = None
-        self.trackedworm_center = None
         self.found_trackedworm = False
 
         self.tracking = False
@@ -124,6 +142,14 @@ class TrackerDevice:
             shape=self.shape,
             datatype=dtype)
 
+        self.data_publisher_tracking_models = TimestampedPublisher(
+            host=data_out_tracking_model[0],
+            port=data_out_tracking_model[1],
+            bound=data_out_tracking_model[2],
+            shape=self.shape,
+            datatype=dtype
+        ) if data_out_tracking_model is not None else None
+
         self.command_subscriber = ObjectSubscriber(
             obj=self,
             name=name,
@@ -143,6 +169,7 @@ class TrackerDevice:
         self.poller.register(self.data_subscriber.socket, zmq.POLLIN)
 
         time.sleep(1)
+        return
 
     def set_point(self, i):
         self.command_publisher.send(f"hub _teensy_commands_get_pos {self.name} {i}")
@@ -212,37 +239,134 @@ class TrackerDevice:
         self._send_log(f"offset-z changed to {self.offset_z}")
     
     def detect(self, img):
-        img_annotated = self.detector.detect(img)
+        # Detect xy-tracking and z-focus
+        img_annotated = img.copy()
+        # If tracking and no new coordinates set
+        ## X-Y tracking rest
+        if not self.is_xy_worm_set:  # Retract coordinates toward center
+            if not is_nan(self.x_worm) and not is_nan(self.y_worm):
+                self.x_worm = (1.0-self.TRACKING_RETRACTION_FACTOR_XY)*self.img_x_center + self.TRACKING_RETRACTION_FACTOR_XY*self.x_worm
+                self.y_worm = (1.0-self.TRACKING_RETRACTION_FACTOR_XY)*self.img_y_center + self.TRACKING_RETRACTION_FACTOR_XY*self.y_worm
+            elif self.tracking_mode is not None:
+                self.x_worm = self.img_x_center
+                self.y_worm = self.img_y_center
+            else:
+                self.x_worm = None
+                self.y_worm = None
+        else:  # Consume the set coordinates
+            self.is_xy_worm_set = False
+            self._log_worm_positions()
+        ## Z Focusing
+        if self.focus_mode is None:
+            pass
+        elif not self.is_z_worm_set:
+            if not is_nan(self.z_worm_focus):
+                self.z_worm_focus *= self.TRACKING_RETRACTION_FACTOR_Z
+            else:
+                self.z_worm_focus = None
+        else:  # Consume the set focus
+            self.is_z_worm_set = False
+            self._log_worm_focus()
+        ## Add Annotations
+        ### XY tracking
+        if self.tracking_mode is not None:
+            # Add worm bounding box if set
+            if self.tracking_mode == "xy_threshold" and not is_nan(self.bbox_worm_xmin) and not is_nan(self.bbox_worm_ymin):
+                img_annotated = cv.rectangle(img_annotated, (self.bbox_worm_xmin, self.bbox_worm_ymin), (self.bbox_worm_xmax, self.bbox_worm_ymax), 255, 2)
+            elif not is_nan(self.x_worm) and not is_nan(self.y_worm): # Add the worm coordinate annotations
+                img_annotated = cv.circle(
+                    img_annotated,
+                    (int(self.x_worm), int(self.y_worm)),
+                    radius=10, color=255, thickness=2
+                )
+            # Add a dot in the center of the image
+            img_annotated = cv.circle(
+                img_annotated, (255, 255),
+                radius=3, color=0, thickness=2
+            )
+            img_annotated = cv.circle(
+                img_annotated, (255, 255),
+                radius=2, color=255, thickness=2
+            )
         return img_annotated
 
+    def set_z_worm_focus(self, z_worm_focus):
+        if isinstance(z_worm_focus, str):  # argument is not an int or a float, e.g. ObjectSubscriber failed to convert it -> it should be 'None' string
+            self.z_worm_focus = None
+        else:
+            self.z_worm_focus = z_worm_focus
+            self.is_z_worm_set = True
+        return
+    def set_xy_worm(self, x_worm, y_worm):
+        if isinstance(x_worm, str) or isinstance(y_worm, str):  # argument is not an int or a float, e.g. ObjectSubscriber failed to convert it -> it should be 'None' string
+            self.x_worm, self.y_worm = None, None
+        else:
+            self.x_worm, self.y_worm = x_worm, y_worm
+            self.is_xy_worm_set = True
+        return
+    def set_boundingbox_worm(self, xmin, xmax, ymin, ymax):
+        if isinstance(xmin, str) or isinstance(xmax, str) or isinstance(ymin, str) or isinstance(ymax, str):
+            self.bbox_worm_xmin, self.bbox_worm_xmax = None, None
+            self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
+            # In XY thresholding method, finding worm means having it's bounding box
+            if self.tracking_mode == "xy_threshold":
+                self.found_trackedworm = False
+        else:
+            self.bbox_worm_xmin = xmin
+            self.bbox_worm_xmax = xmax
+            self.bbox_worm_ymin = ymin
+            self.bbox_worm_ymax = ymax
+            # In XY thresholding method, finding worm means having it's bounding box
+            if self.tracking_mode == "xy_threshold":
+                self.found_trackedworm = True
+        return
     def set_tracking_mode(self, tracking_mode):
         """
         Sina: this will be changed in the future to let the `tracking_tools` be a separate device and does not require a relay like this.
         """
-        try:
-            self.detector.set_tracking_mode( tracking_mode=tracking_mode )
-        except Exception as e:
-            print("Unable to load tracking models.")
-            print("### Error:\n\n" + str(e))
+        self.tracking_mode = tracking_mode
+        if self.tracking_mode.lower() == "none":
+            self.x_worm, self.y_worm = None, None
+            self.bbox_worm_xmin, self.bbox_worm_xmax = None, None
+            self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
+            self.tracking_mode = None
+            self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( None ))
+        else:
+            # Send signal to tracking device to start and set mode
+            self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( self.tracking_mode ))
+            # Tracking is always ON
+            self.found_trackedworm = True
+        # Return
         return
     def set_focus_mode(self, focus_mode):
         """
         Sina: this will be changed in the future to let the `tracking_tools` be a separate device and does not require a relay like this.
         """
-        try:
-            self.detector.set_focus_mode( focus_mode=focus_mode )
-        except Exception as e:
-            print("Unable to load tracking models.")
-            print("### Error:\n\n" + str(e))
+        self.focus_mode = focus_mode
+        if self.focus_mode.lower() == "none":
+            self.z_worm_focus = None
+            self.focus_mode = None
+        self.command_publisher.send("tracking_models_behavior set_focus_mode {}".format( self.focus_mode ))
+        # Return
+        return
+
+    def send_img_to_tracking_models(self, img):
+        if self.data_publisher_tracking_models is not None:
+            # Don't send data over if not necessary
+            if self.tracking_mode is None and self.focus_mode is None:
+                pass
+            else:  # Send the image to device and wait for the call-back from there
+                self.data_publisher_tracking_models.send(img)
         return
 
     def _process(self):
+        # Receive last frame
         msg_timestamp, msg = self.data_subscriber.get_last()
         if msg is not None:
             self.data = msg[:,::-1] if self.flip_image else msg
         else:
             return
-        
+
         self.data_publisher_writer.send(self.data, msg_timestamp)
 
         if tuple(self.data.shape) != (512, 512):
@@ -250,66 +374,70 @@ class TrackerDevice:
         else:
             data = self.data
 
+        # Send the data to writer/displayer and continue
+        # if "gcamp" recording.
+        # You can change it in case you wanna track using GCaMP signal.
         if self.name == "tracker_gcamp":
             self.data_publisher_displayer.send(data)
             return
 
+        # Detecting the tracking point and z-focus
+        self.send_img_to_tracking_models(data)
         img_annotated = self.detect(data)
 
-        if self.shape[0] != 512:
-            _factor = int(self.shape[0]/512)
-            self.x_worm = _factor*self.x_worm if self.x_worm is not None else self.x_worm
-            self.y_worm = _factor*self.y_worm if self.y_worm is not None else self.y_worm
-
         self.data_publisher_displayer.send(img_annotated)
-
-        self._log_worm_positions()
 
         # Tracking in Z direction
         # Priority: Z-AutoFocus > Interpolation
         self.vz = None
-        if self.z_autofocus_tracking:
+        if self.focus_mode is not None and self.z_autofocus_tracking:
             self.vz = self._estimate_vz_by_z_autofocus()
         elif self.interpolation_tracking:
             self.vz = self._estimate_vz_by_interpolation()
 
-        if self.tracking and not self.found_trackedworm:
-            self.missing_worm_idx += 1
-            if self.missing_worm_idx == self.MISSING_WORM_TOLERANCE:
-                self.vy, self.vx = 0, 0
-            else:
+        # Tracking XY
+        if self.tracking:
+            if self.tracking_mode is None:  # No tracking mode set
                 self.vy, self.vx = None, None
-        elif self.tracking and self.found_trackedworm:
-            self.missing_worm_idx = 0
-            self.vy, self.vx = self.pid_controller.get_velocity(self.y_worm, self.x_worm)
-        else:
+            elif not self.found_trackedworm:  # Tracking but worm not found
+                self.missing_worm_idx += 1
+                if self.missing_worm_idx == self.MISSING_WORM_TOLERANCE:
+                    self.vy, self.vx = 0, 0
+                else:
+                    self.vy, self.vx = None, None
+            elif self.found_trackedworm:  # Tracking and worm found
+                self.missing_worm_idx = 0
+                self.vy, self.vx = self.pid_controller.get_velocity(self.y_worm, self.x_worm)
+        else:  # Disabled tracking
             self.vx, self.vy, self.vz = None, None, None
 
         self._set_velocities(self.vx, self.vy, self.vz)
+        return
 
     def start(self):
         if not self.tracking:
             self._send_log("starting tracking")
             self.missing_worm_idx = 0
-            self.trackedworm_center = None
-            self.trackedworm_size = None
             self.tracking = True
+            self.command_publisher.send("tracking_models_behavior start_tracking")
             self.pid_controller.reset()
+        return
 
     def stop(self):
         if self.tracking:
             self._set_velocities(0, 0, 0)
             self._send_log("stopping tracking")
             self.missing_worm_idx = 0
-            self.trackedworm_center = None
-            self.trackedworm_size = None
             self.tracking = False
+            self.command_publisher.send("tracking_models_behavior stop_tracking")
             self.pid_controller.reset()
+        return
 
     def shutdown(self):
         self._send_log("shutdown command received")
         self.stop()
         self.running = False
+        return
 
     def _send_log(self, msg_obj):
         msg = str(msg_obj)
@@ -318,11 +446,23 @@ class TrackerDevice:
 
         msg = "{} {} {}".format( time.time(), self.name, msg )
         self.command_publisher.send(f"logger {msg}")
+        return
 
     def _log_worm_positions(self):
         x,y = (self.x_worm, self.y_worm) if self.found_trackedworm else (-1, -1)
         msg = f"<TRACKER-WORM-COORDS> x-y coords: ({x},{y})"
         self._send_log(msg)
+        return
+
+    def _log_worm_focus(self):
+        if self.z_worm_focus is not None:
+            z_focus = self.z_worm_focus
+            z_focus_offsetted = self.z_worm_focus + self.z_worm_focus_offset
+        else:
+            z_focus, z_focus_offsetted = None, None
+        msg = f"<TRACKER-WORM-FOCUS> z-focus, offsetted: ({z_focus}, {z_focus_offsetted})"
+        self._send_log(msg)
+        return
 
     def interpolate_z_tracking(self, yes_no):
         if isinstance(yes_no, bool):
@@ -359,6 +499,7 @@ class TrackerDevice:
                 self.command_subscriber.handle()
             elif self.data_subscriber.socket in sockets:
                 self._process()
+        return
 
     def _set_velocities(self, vx, vy, vz):
     
@@ -381,6 +522,7 @@ def main():
         commands_out=parse_host_and_port(arguments["--commands_out"]),
         data_out_writer=parse_host_and_port(arguments["--data_out_writer"]),
         data_out_displayer=parse_host_and_port(arguments["--data_out_displayer"]),
+        data_out_tracking_model=parse_host_and_port(arguments["--data_out_tracking_model"]),
         fmt=arguments["--format"],
         interpolation_tracking=arguments["--interpolation_tracking"],
         z_autofocus_tracking=arguments["--z_autofocus_tracking"],

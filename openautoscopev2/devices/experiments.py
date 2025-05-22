@@ -8,7 +8,10 @@ from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2 as cv
-from openautoscopev2.devices.utils_data import load_process_log_files, load_files_data_times, SerializeDatas
+from openautoscopev2.devices.utils_data import (
+    load_process_log_files, load_files_data_times, SerializeDatas,
+    change_binning, ImgToProcess
+)
 from openautoscopev2.zmq.client import GUIClient
 
 # Parameters
@@ -19,17 +22,19 @@ DIFF_COORDS_TO_PIXELS_10x = np.array([
 ], dtype=np.float64)
 MM_PER_PIXEL_10x = 1/512
 MASK_MEDIAN_BLUR_SIZE_10x = 51
-MASK_THRESHOLD_10x = -2
+MASK_THRESHOLD_10x = 2
 ## 4x
 DIFF_COORDS_TO_PIXELS_4x = np.array([
     [ 0.00, 0.55],
     [-0.60, 0.00],
 ], dtype=np.float64)
 MM_PER_PIXEL_4x = 1/410  # Calibrated with 1mm slide, 410 pixels corresponded to 1mm vertically
-MASK_MEDIAN_BLUR_SIZE_4x = 21  # previous 31
-MASK_THRESHOLD_4x = -5  # 10 before
+MASK_MEDIAN_BLUR_SIZE_4x = 31  # previous 31  TODO: change this, 25 worked
+MASK_THRESHOLD_4x = 2  # 10 before, TODO: change this, 2 worked
+SIZE_SMALLEST_FOREGROUND_4X = 100
 ## Select
 MASK_THRESHOLD = MASK_THRESHOLD_4x
+SIZE_SMALLEST_FOREGROUND = SIZE_SMALLEST_FOREGROUND_4X
 MASK_MEDIAN_BLUR_SIZE = MASK_MEDIAN_BLUR_SIZE_4x
 DIFF_COORDS_TO_PIXELS = DIFF_COORDS_TO_PIXELS_4x
 MM_PER_PIXEL = MM_PER_PIXEL_4x
@@ -40,6 +45,14 @@ def pdump(obj, fp_write):
     with open(fp_write, 'wb') as out_file:
         pickle.dump(obj, out_file)
     return
+def img_remove_small_objects(img_mask, size_threshold = 20):
+    n_labels, labels, stats, _ = cv.connectedComponentsWithStats(img_mask.astype(np.uint8))
+    img_mask_refined = np.zeros_like(img_mask, dtype=np.bool_)
+    for label in range(1, n_labels):
+        obj_area = stats[label,-1]
+        if obj_area > size_threshold:
+            img_mask_refined |= labels == label
+    return img_mask_refined
 def fp_folder_to_combined_frame(fp_folder: str, idx_start: int = 0, include_subfolders: bool = False, save_frame: bool = True):
     global DIFF_COORDS_TO_PIXELS
     # TODO: these were set based on 10x, should change for 4x?
@@ -50,6 +63,13 @@ def fp_folder_to_combined_frame(fp_folder: str, idx_start: int = 0, include_subf
     _wildcard = os.path.join( fp_folder, "*_behavior" ) if include_subfolders else fp_folder
     files, datas, times = load_files_data_times( _wildcard )
     series = SerializeDatas(datas)
+    ## Change image to 512*512 by binning
+    _, _nx, _ny = series.shape
+    if _nx != 512:
+        _binning = _nx//512
+        def do_img_beh(img):
+            return change_binning(img, _binning)
+        series = ImgToProcess(series, fn_process=do_img_beh)
     n_imgs, nx, ny = series.shape
     times = np.concatenate([ t[:] for t in times ])
     ############################################################
@@ -88,9 +108,10 @@ def fp_folder_to_combined_frame(fp_folder: str, idx_start: int = 0, include_subf
         )
         # Mask
         # TODO: numbers set based on 10x, change for 4x?
-        img_blur_small = cv.GaussianBlur(img, (31,31), 2.0).astype(np.float32)
+        img_blur_small = cv.GaussianBlur(img, (31,31), 1.0).astype(np.float32)
         img_blur_large = cv.GaussianBlur(img, (31,31), 5.0).astype(np.float32)
-        img_mask = (img_blur_small - img_blur_large) < MASK_THRESHOLD  # 10x value is -2, 4x value is -10
+        img_mask = np.abs(img_blur_small - img_blur_large) > MASK_THRESHOLD
+        img_mask = img_remove_small_objects(img_mask, size_threshold=SIZE_SMALLEST_FOREGROUND)
         frame_mask_food[(i+LX2):(i+LX), (j+LY2):(j+LY)] |= img_mask
     ############################################################################################
     # Close files

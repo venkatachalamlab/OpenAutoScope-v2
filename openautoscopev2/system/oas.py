@@ -20,6 +20,9 @@ class OASwithGUI:
         self.data_camera_out_gcamp = 5005
         self.tracker_to_writer_behavior = 5006
         self.tracker_to_writer_gcamp = 5007
+        self.tracker_to_tracking_model = 5010
+
+        return
 
     def kill(self):
         for job in self.jobs:
@@ -28,6 +31,7 @@ class OASwithGUI:
             except PermissionError as _e:
                 print("Error: ", _e)
         self.jobs = []
+        return
 
     def run(self):
 
@@ -112,6 +116,7 @@ class OASwithGUI:
                         f"--data_in=L{self.data_camera_out_behavior}",
                         f"--data_out_writer={self.tracker_to_writer_behavior}",
                         f"--data_out_displayer={tracker_to_displayer_behavior}",
+                        f"--data_out_tracking_model={self.tracker_to_tracking_model}",
                         f"--format={format}",
                         f"--interpolation_tracking={interpolation_tracking}",
                         f"--z_autofocus_tracking={z_autofocus_tracking}",
@@ -130,6 +135,13 @@ class OASwithGUI:
                         f"--name=tracker_gcamp",
                         f"--gui_fp={gui_fp}",
                         "--flip_image"]))
+
+        self.jobs.append(Popen(["oas_tracking_models",
+                        f"--data_in=L{self.tracker_to_tracking_model}",
+                        f"--commands_in=L{forwarder_out}",
+                        f"--commands_out=L{forwarder_in}",
+                        f"--gui_fp={gui_fp}",
+                        f"--name=tracking_models_behavior"]))
 
         self.jobs.append(Popen(["oas_writer",
                         f"--data_in=L{self.tracker_to_writer_behavior}",
