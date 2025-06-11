@@ -9,7 +9,7 @@ def is_nan(x):
 
 class PIDController():
 
-    def __init__(self, Kpy, Kpx, Kiy, Kix, Kdy, Kdx, SPy, SPx):
+    def __init__(self, Kpy, Kpx, Kiy, Kix, Kdy, Kdx, SPy, SPx, scale_factor = 1.0):
 
         self.Kpy = Kpy
         self.Kiy = Kiy
@@ -24,6 +24,8 @@ class PIDController():
 
         self.SPy = self.SPx0
         self.SPx = self.SPy0
+
+        self.scale_factor = scale_factor
         
         self.reset()
         return
@@ -50,8 +52,8 @@ class PIDController():
             self.reset()
             return int(-self.Vy), int(self.Vx)
 
-        Ey = self.SPy - y if y is not None and not np.isnan(y) else self.SPy
-        Ex = self.SPx - x if x is not None and not np.isnan(x)  else self.SPx
+        Ey = self.SPy - self.scale_factor*y if y is not None and not np.isnan(y) else self.SPy
+        Ex = self.SPx - self.scale_factor*x if x is not None and not np.isnan(x)  else self.SPx
 
         self.Iy = 0.1*Ey + 0.9*self.Iy
         self.Ix = 0.1*Ex + 0.9*self.Ix

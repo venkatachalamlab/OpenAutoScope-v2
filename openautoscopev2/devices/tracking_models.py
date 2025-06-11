@@ -104,7 +104,7 @@ class TrackingModels:
         self.trackedworm_center = None
 
         # Run parameters
-        self.tracking = False  # if tracking is active. only used by threshold xy tracking
+        self.tracking = True  # if tracking is active  DEBUG! IT WAS `FALSE`
         self.running = True  # if the process is running, e.g. listening for commands or waiting for images to process
 
         self.command_publisher = Publisher(
@@ -174,6 +174,7 @@ class TrackingModels:
 
     def detect(self, img):
         # Z focus
+        # print(f"DEBUG sending z-worm-focus: {z_worm_focus}")
         if self.selected_focus_mode is None or self.selected_focus_mode == "" or self.selected_focus_mode == "none":
             self.z_worm_focus = None
         else:
@@ -185,14 +186,13 @@ class TrackingModels:
             
 
         # XY tracking
-        ## No tracking method
         if self.selected_tracking_mode is None or self.selected_tracking_mode == "" or self.selected_tracking_mode == "none":
             self.x_worm, self.y_worm = None, None
-        elif self.selected_tracking_mode == "xy_threshold":  # Special case of XY-Thresholding method
+        elif self.selected_tracking_mode == "xy_threshold":
             x_worm, y_worm, x_min, x_max, y_min, y_max = self.track_xy_using_threshold(img)
             self.send_xy_worm( x_worm, y_worm )
             self.send_boundingbox_worm( x_min, x_max, y_min, y_max )
-        else:  # Using ML models (through ONNX runtime) for tracking
+        else:
             model_key = f"tracking_{self.selected_tracking_mode}"
             ort_runtime = self.ort_dict[model_key]
             x_worm, y_worm = self.xy_tracking_single_channel_full_image(img, ort_runtime)
@@ -236,6 +236,7 @@ class TrackingModels:
         self.selected_focus_mode = focus_mode
         if focus_mode == "" or focus_mode.lower() == "none":
             self.selected_focus_mode = None
+        print(f"DEBUG focus mode set! {self.selected_focus_mode}")
         return
 
     def track_xy_using_threshold(self, img):
@@ -318,6 +319,10 @@ class TrackingModels:
         return self.x_worm, self.y_worm
 
     def z_focus_single_channel_full_image(self, img, ort_runtime, sign):
+        # Close to arena boundary -> don't change focus
+        if np.mean( img < 50 ) >= 0.05:  # Too close to the arena boundaries
+            self.z_worm_focus = 0.0
+            return self.z_worm_focus
         # Network predicts z-focus
         batch_1_512_512 = {
             'input': img[np.newaxis, np.newaxis, :, :].astype(np.float32),
