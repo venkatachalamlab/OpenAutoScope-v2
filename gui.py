@@ -429,25 +429,25 @@ def main():
     for element in elements:
         element.set_client(gui_client)
     # Experiment Designed
-    # ## Food Patch Entry
-    # experiment = ExperimentFoodPatchTimed(
-    #     d_turn_on_outside_um=1000.0,
-    #     t_turn_on_after_entry_s=5*60.0,
-    #     t_rest_between_exposures_s=20*60.0,
-    #     fp_folder_scan=None,
-    #     client=gui_client
-    # )
+    ## Food Patch Entry
+    experiment = ExperimentFoodPatchTimed(
+        d_turn_on_outside_um=1000.0,
+        t_turn_on_after_entry_s=5*60.0,
+        t_rest_between_exposures_s=20*60.0,
+        fp_folder_scan=None,
+        client=gui_client
+    )
     # ## Periodic Blue Exposure
     # experiment = ExperimentPeriodicExposure(
     #     duration_exposure_seconds=0.5,
     #     duration_rest_seconds=10.0*60,
     #     client=gui_client
     # )
-    ## Optogenetic Stimulaiton
-    experiment = ExperimentOptogeneticExposure(
-        client=gui_client,
-        duration_exposure_seconds=0.5
-    )
+    # ## Optogenetic Stimulaiton
+    # experiment = ExperimentOptogeneticExposure(
+    #     client=gui_client,
+    #     duration_exposure_seconds=0.5
+    # )
     ## Setting experiment argument element
     ui_experiment_load_patches.set_experiment(experiment)
     ui_experiment_arguments.set_experiment(experiment)

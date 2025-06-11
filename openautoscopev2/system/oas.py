@@ -22,8 +22,6 @@ class OASwithGUI:
         self.tracker_to_writer_gcamp = 5007
         self.tracker_to_tracking_model = 5010
 
-        return
-
     def kill(self):
         for job in self.jobs:
             try:
@@ -170,3 +168,4 @@ class OASwithGUI:
                         f"--outbound=L{forwarder_in}",
                         f"--port={teensy_usb_port}",
                         f"--name=teensy_commands"]))
+        return

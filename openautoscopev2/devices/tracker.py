@@ -168,6 +168,13 @@ class TrackerDevice:
         self.poller.register(self.command_subscriber.socket, zmq.POLLIN)
         self.poller.register(self.data_subscriber.socket, zmq.POLLIN)
 
+        self.DEBUG_counter = 0
+        self.DEBUG_duration_overall = 0
+        self.DEBUG_timestamp_start = 0.0
+        self.DEBUG_timestamp_end = 0.0
+        self.DEBUG_duration_process = 0
+        self.DEBUG_timestamp_start_process = 0.0
+        self.DEBUG_timestamp_end_process = 0.0
         time.sleep(1)
         return
 
@@ -331,6 +338,10 @@ class TrackerDevice:
             self.bbox_worm_ymin, self.bbox_worm_ymax = None, None
             self.tracking_mode = None
             self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( None ))
+        # elif self.tracking_mode == "xy_threshold":
+        #     # Send signal to tracking device to stop
+        #     self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( None ))
+        #     self.found_trackedworm = False
         else:
             # Send signal to tracking device to start and set mode
             self.command_publisher.send("tracking_models_behavior set_tracking_mode {}".format( self.tracking_mode ))
@@ -353,6 +364,7 @@ class TrackerDevice:
     def send_img_to_tracking_models(self, img):
         if self.data_publisher_tracking_models is not None:
             # Don't send data over if not necessary
+            # if (self.tracking_mode == "xy_threshold" or self.tracking_mode is None) and self.focus_mode is None:
             if self.tracking_mode is None and self.focus_mode is None:
                 pass
             else:  # Send the image to device and wait for the call-back from there
@@ -360,7 +372,14 @@ class TrackerDevice:
         return
 
     def _process(self):
-        # Receive last frame
+        ###################### DEBUG
+        self.DEBUG_timestamp_start_process = time.time()
+        if self.DEBUG_counter%100 == 0:
+            self.DEBUG_timestamp_start = time.time()
+            self.DEBUG_counter = 0
+            self.DEBUG_duration_process = 0.0
+        ######################
+
         msg_timestamp, msg = self.data_subscriber.get_last()
         if msg is not None:
             self.data = msg[:,::-1] if self.flip_image else msg
@@ -412,6 +431,15 @@ class TrackerDevice:
             self.vx, self.vy, self.vz = None, None, None
 
         self._set_velocities(self.vx, self.vy, self.vz)
+        ###################### DEBUG
+        self.DEBUG_timestamp_end_process = time.time()
+        self.DEBUG_duration_process += (self.DEBUG_timestamp_end_process - self.DEBUG_timestamp_start_process)
+        if (self.DEBUG_counter+1)%100 == 0:
+            self.DEBUG_timestamp_end = time.time()
+            self.DEBUG_duration_overall = ( self.DEBUG_timestamp_end - self.DEBUG_timestamp_start )
+            print(f"Duration for 100 frames overall/processed: {(self.DEBUG_duration_overall*10):>5.2f}ms / {(self.DEBUG_duration_process*10):>5.2f}ms")
+        self.DEBUG_counter += 1
+        ######################
         return
 
     def start(self):
