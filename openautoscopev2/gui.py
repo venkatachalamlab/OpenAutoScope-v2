@@ -43,7 +43,10 @@ def jdump(obj, fp):
         )
 
 def main():
-    FP_OAS_GUI_FOLDER = os.path.dirname(os.path.abspath(__file__))
+    FP_OAS_GUI_FOLDER = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        ".."
+    )
     fp_data_path = os.path.join(
         FP_OAS_GUI_FOLDER,
         "data"

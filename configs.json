@@ -14,7 +14,7 @@
     "camera_serial_number_behavior": "22591117",
     "camera_serial_number_gcamp": "22591142",
     "camera_gcamp_gain": 30.0,
-    "teensy_usb_port": "COM4",
+    "teensy_usb_port": "COM5",
     "z_dir": 1,
     "y_dir": -1,
     "x_dir": -1,
