@@ -1,0 +1,12 @@
+# pyproject.toml
+
+# Configuration for the Black code formatter
+[tool.black]
+line-length = 88
+
+# Configuration for the flake8 linter
+[tool.flake8]
+max-line-length = 88
+# Ignore error E203, which is incompatible with how black formats slices.
+# Also ignoring W503, as black handles line breaks before binary operators.
+extend-ignore = ["E203", "W503"]

@@ -1,12 +1,17 @@
 {
-    // --- General Python Settings ---
+    // --- General Settings ---
     "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false, // Disable the default linter
-    "python.linting.flake8Enabled": true,
-    // --- Formatter Settings (Black) ---
-    "editor.formatOnSave": true, // Automatically format when you save
-    "python.formatting.provider": "black",
-    // --- Optional: Set a default line length for the ruler ---
+    // --- Actions on Save ---
+    "[python]": {
+        // Use the official Black Formatter extension
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        // This runs formatting and organizes imports automatically on every save
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "editor.formatOnSave": true,
+    // --- Optional: Visual ruler for line length ---
     "editor.rulers": [
         88
     ]
