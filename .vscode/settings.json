@@ -1,0 +1,13 @@
+{
+    // --- General Python Settings ---
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false, // Disable the default linter
+    "python.linting.flake8Enabled": true,
+    // --- Formatter Settings (Black) ---
+    "editor.formatOnSave": true, // Automatically format when you save
+    "python.formatting.provider": "black",
+    // --- Optional: Set a default line length for the ruler ---
+    "editor.rulers": [
+        88
+    ]
+}
