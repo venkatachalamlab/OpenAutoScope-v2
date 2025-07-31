@@ -11,13 +11,21 @@ from typing import Tuple
 
 import numpy as np
 
+
 def make_timestamped_filename(directory: str, stub: str, ext: str):
     """Create a file name containing date and time."""
 
     now = datetime.datetime.now()
     filename = "%04d_%02d_%02d_%02d_%02d_%02d_%s.%s" % (
-        now.year, now.month, now.day, now.hour, now.minute, now.second,
-        stub, ext)
+        now.year,
+        now.month,
+        now.day,
+        now.hour,
+        now.minute,
+        now.second,
+        stub,
+        ext,
+    )
     return os.path.join(directory, filename)
 
 
@@ -39,7 +47,7 @@ def apply_lut(x: np.ndarray, lo: float, hi: float, newtype=None) -> np.ndarray:
     if newtype is None:
         newtype = x.dtype
 
-    y_float = (x-lo)/(hi-lo)
+    y_float = (x - lo) / (hi - lo)
     y_clipped = np.clip(y_float, 0, 1)
 
     if np.issubdtype(newtype, np.integer):
@@ -47,25 +55,27 @@ def apply_lut(x: np.ndarray, lo: float, hi: float, newtype=None) -> np.ndarray:
     else:
         maxval = 1.0
 
-    return (maxval*y_clipped).astype(newtype)
+    return (maxval * y_clipped).astype(newtype)
 
-def mip_x(vol:np.ndarray) -> np.ndarray:
-    return np.transpose(np.max(vol, axis=2),
-        (1, 0, *(range(2, np.ndim(vol)-1))))
 
-def mip_y(vol:np.ndarray) -> np.ndarray:
+def mip_x(vol: np.ndarray) -> np.ndarray:
+    return np.transpose(np.max(vol, axis=2), (1, 0, *(range(2, np.ndim(vol) - 1))))
+
+
+def mip_y(vol: np.ndarray) -> np.ndarray:
     return np.max(vol, axis=1)
 
-def mip_z(vol:np.ndarray) -> np.ndarray:
+
+def mip_z(vol: np.ndarray) -> np.ndarray:
     return np.max(vol, axis=0)
+
 
 def mip_threeview(vol: np.ndarray) -> np.ndarray:
     """Combine 3 maximum intensity projections of a volume into a single
     2D array."""
 
     S = vol.shape
-    output_shape = (S[1] + 4 * S[0],
-                    S[2] + 4 * S[0])
+    output_shape = (S[1] + 4 * S[0], S[2] + 4 * S[0])
 
     vol = np.repeat(vol, 4, axis=0)
 
@@ -75,15 +85,16 @@ def mip_threeview(vol: np.ndarray) -> np.ndarray:
 
     output = np.zeros(output_shape, dtype=vol.dtype)
 
-    output[:S[1], :S[2]] = z
-    output[:S[1], S[2]:] = x
-    output[S[1]:, :S[2]] = y
+    output[: S[1], : S[2]] = z
+    output[: S[1], S[2] :] = x
+    output[S[1] :, : S[2]] = y
 
     return output
+
 
 def resolve_path(fp: str, fp_base_dir: str):
     if os.path.isabs(fp):
         return fp
     if os.sep != "/":
         fp = fp.replace("/", os.sep)
-    return os.path.join( fp_base_dir, fp )
+    return os.path.join(fp_base_dir, fp)
