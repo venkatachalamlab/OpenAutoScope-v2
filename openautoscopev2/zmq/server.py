@@ -17,19 +17,13 @@ Options:
 import zmq
 from docopt import docopt
 
-from openautoscopev2.zmq.utils import (
-    coerce_string,
-    coerce_bytes,
-    try_num
-)
+from openautoscopev2.zmq.utils import coerce_string, coerce_bytes, try_num
 
-class Server():
+
+class Server:
     """This is a wrapped ZMQ server operating on a TCP socket."""
 
-    def __init__(
-            self,
-            port: int,
-            name="Server"):
+    def __init__(self, port: int, name="Server"):
 
         self.name = name
 
@@ -72,6 +66,7 @@ class Server():
         while self.running:
             self.handle()
 
+
 class ObjectServer(Server):
     """This takes an object and creates a server that handles requests to
     query and mutate that object."""
@@ -87,7 +82,7 @@ class ObjectServer(Server):
 
         if len(req_parts) <= 1:
             rep = "Command should at least have 2 parts."
-            
+
         else:
             op = req_parts[0]
             attr = req_parts[1]
@@ -110,6 +105,7 @@ class ObjectServer(Server):
 
         self.send(coerce_bytes(rep))
 
+
 def main():
     """CLI entry point."""
 
@@ -118,6 +114,7 @@ def main():
 
     server = Server(port)
     server.run()
+
 
 if __name__ == "__main__":
     main()

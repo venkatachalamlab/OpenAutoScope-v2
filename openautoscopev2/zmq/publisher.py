@@ -22,17 +22,14 @@ from docopt import docopt
 from openautoscopev2.zmq.utils import (
     address_from_host_and_port,
     parse_host_and_port,
-    connect_or_bind
+    connect_or_bind,
 )
 
-class Publisher():
+
+class Publisher:
     """This wraps a ZMQ PUB socket."""
 
-    def __init__(
-            self,
-            port: int,
-            host="localhost",
-            bound=True):
+    def __init__(self, port: int, host="localhost", bound=True):
 
         self.port = port
         self.host = host
@@ -69,12 +66,12 @@ class Publisher():
             except KeyboardInterrupt:
                 self.running = False
 
-
     def run_blocking(self):
         """Run in the main thread, blocking to receive input."""
 
         self.running = True
         self.loop()
+
 
 def main():
     """CLI entry point."""
@@ -86,6 +83,7 @@ def main():
     publisher = Publisher(port=port, host=host, bound=bound)
 
     publisher.run_blocking()
+
 
 if __name__ == "__main__":
     main()

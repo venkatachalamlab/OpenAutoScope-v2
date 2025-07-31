@@ -11,17 +11,20 @@ from typing import Union, Tuple
 
 import zmq
 
+
 def coerce_string(x: Union[bytes, str]) -> str:
     """Convert bytes to a string."""
     if isinstance(x, bytes):
         x = x.decode("utf-8")
     return x
 
+
 def coerce_bytes(x: Union[bytes, str]) -> bytes:
     """Convert a string to bytes."""
     if isinstance(x, str):
         x = bytes(x, "utf-8")
     return x
+
 
 def try_num(s: str) -> Union[str, float, int]:
     """Attempt to convert a string to an integer. If that fails, try a float.
@@ -35,11 +38,8 @@ def try_num(s: str) -> Union[str, float, int]:
         except ValueError:
             return s
 
-def address_from_host_and_port(
-        host: str,
-        port: int,
-        bound: bool = False
-    ) -> str:
+
+def address_from_host_and_port(host: str, port: int, bound: bool = False) -> str:
     """Return a TCP address for a given host and port. If the address is meant
     to be bound, it will be bound to all available TCP interfaces (*)."""
 
@@ -49,6 +49,7 @@ def address_from_host_and_port(
         address = "tcp://{}:{}".format(host, port)
 
     return address
+
 
 def connect_or_bind(socket, address: str, bound: bool):
     """Connect or bind the socket to address."""
@@ -69,7 +70,8 @@ def get_last(receiver):
             msg = receiver(flags=zmq.NOBLOCK)
         except zmq.error.Again:
             break
-        except:
+        except Exception as e:
+            print("### Exception in `zmq.utils.get_last`", str(e))
             raise
 
     return msg
@@ -110,15 +112,21 @@ def parse_host_and_port(val: str) -> Tuple[str, int, bool]:
 
     return (host, port, bound)
 
+
 def push_timestamp(msg: bytes, timestamp: float = None) -> bytes:
-    """ This prepends a timestamp returned by python's time.time() as a double
+    """This prepends a timestamp returned by python's time.time() as a double
     to the buffer specified by msg."""
-    now = struct.pack('d', time.time()) if timestamp is None else struct.pack('d', timestamp)
+    now = (
+        struct.pack("d", time.time())
+        if timestamp is None
+        else struct.pack("d", timestamp)
+    )
     return msg + now
 
+
 def pop_timestamp(msg: bytes) -> Tuple[float, bytes]:
-    """ This pulls out a timestamp as returned by python's time.time() from the
+    """This pulls out a timestamp as returned by python's time.time() from the
     front of a message."""
     (timestamp, msg) = (msg[-8:], msg[:-8])
-    timestamp = struct.unpack('d', timestamp)[0]
+    timestamp = struct.unpack("d", timestamp)[0]
     return (timestamp, msg)

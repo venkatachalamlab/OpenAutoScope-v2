@@ -20,11 +20,11 @@ Options:
 """
 
 import signal
-import time
 import threading
 
 import zmq
 from docopt import docopt
+
 
 def run_proxy(inbound, outbound, control, context):
 
@@ -37,12 +37,12 @@ def run_proxy(inbound, outbound, control, context):
     control_socket = context.socket(zmq.PAIR)
     control_socket.connect(f"tcp://localhost:{control}")
 
-
     try:
         zmq.proxy_steerable(inbound_socket, outbound_socket, control=control_socket)
     except zmq.ContextTerminated:
         inbound_socket.close()
         outbound_socket.close()
+
 
 def main():
     """CLI entry point."""
@@ -62,11 +62,11 @@ def main():
     signal.signal(signal.SIGINT, _finish)
 
     proxy_thread = threading.Thread(
-        target=run_proxy,
-        args=(inbound, outbound, control, context)
+        target=run_proxy, args=(inbound, outbound, control, context)
     )
     proxy_thread.start()
     proxy_thread.join()
+
 
 if __name__ == "__main__":
     main()

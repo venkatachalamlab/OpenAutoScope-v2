@@ -27,17 +27,14 @@ from openautoscopev2.zmq.utils import (
     coerce_string,
     coerce_bytes,
     get_last,
-    try_num
+    try_num,
 )
 
-class Subscriber():
+
+class Subscriber:
     """This wraps a ZMQ SUB socket."""
 
-    def __init__(
-            self,
-            port: int,
-            host="localhost",
-            bound=False):
+    def __init__(self, port: int, host="localhost", bound=False):
 
         self.port = port
         self.host = host
@@ -46,9 +43,7 @@ class Subscriber():
         self.context = zmq.Context.instance()
         self.socket = self.context.socket(zmq.SUB)
 
-        self.address = address_from_host_and_port(self.host,
-                                                  self.port,
-                                                  self.bound)
+        self.address = address_from_host_and_port(self.host, self.port, self.bound)
 
         self.connect()
         self.add_subscription("")
@@ -121,17 +116,19 @@ class Subscriber():
         self.running = True
         self.loop()
 
+
 class ObjectSubscriber(Subscriber):
     """This takes an object and starts a subscriber that receives messages
     to mutate that object."""
 
     def __init__(
-            self,
-            obj,
-            port: int,
-            host: str = "localhost",
-            bound=False,
-            name: Optional[str] = None):
+        self,
+        obj,
+        port: int,
+        host: str = "localhost",
+        bound=False,
+        name: Optional[str] = None,
+    ):
 
         Subscriber.__init__(self, port, host, bound)
 
@@ -145,7 +142,7 @@ class ObjectSubscriber(Subscriber):
             self.add_subscription(name)
 
     def process(self, msg: bytes):
-        """ Process messages of the following forms:
+        """Process messages of the following forms:
 
         b"obj_name make_coffee 5.0 espresso": Call make_coffee with
             arguments 5.0 (float) and "espresso" (str).
@@ -183,6 +180,7 @@ class ObjectSubscriber(Subscriber):
         except Exception as exc:
             print("ZMQ/SUBSCRIBER.PY EXCEPTION!", str(exc))
 
+
 def main():
     """CLI entry point."""
 
@@ -193,6 +191,7 @@ def main():
     subscriber = Subscriber(port=port, host=host, bound=bound)
 
     subscriber.run_blocking()
+
 
 if __name__ == "__main__":
     main()

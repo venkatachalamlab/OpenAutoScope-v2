@@ -28,34 +28,30 @@ from openautoscopev2.zmq.publisher import Publisher
 from openautoscopev2.zmq.server import ObjectServer
 from openautoscopev2.zmq.utils import parse_host_and_port
 
-class Hub():
+
+class Hub:
     """This is a central hub that is responsible for subscribing and publishing
     messages to system components, and handling requests from external clients."""
 
     def __init__(
-            self,
-            inbound: Tuple[str, int, bool],
-            outbound: Tuple[str, int, bool],
-            server_port: int,
-            name="hub"):
+        self,
+        inbound: Tuple[str, int, bool],
+        outbound: Tuple[str, int, bool],
+        server_port: int,
+        name="hub",
+    ):
 
         self.name = name
 
         self.publisher = Publisher(
-            host=outbound[0],
-            port=outbound[1], 
-            bound=outbound[2])
+            host=outbound[0], port=outbound[1], bound=outbound[2]
+        )
 
         self.subscriber = ObjectSubscriber(
-            obj=self,
-            host=inbound[0],
-            port=inbound[1],
-            bound=inbound[2],
-            name=self.name)
+            obj=self, host=inbound[0], port=inbound[1], bound=inbound[2], name=self.name
+        )
 
-        self.server = ObjectServer(
-            obj=self,
-            port=server_port)
+        self.server = ObjectServer(obj=self, port=server_port)
 
         self.poller = zmq.Poller()
 
@@ -101,6 +97,7 @@ def main():
 
     scope = Hub(inbound, outbound, server_port)
     scope.run()
+
 
 if __name__ == "__main__":
     main()
