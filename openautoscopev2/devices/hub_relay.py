@@ -21,7 +21,7 @@ Options:
                                             [default: 1]
     --gui_fp=DIR                        GUI directory.
                                             [default: .]
-    
+
 """
 import os
 import time
@@ -32,24 +32,19 @@ from docopt import docopt
 from openautoscopev2.zmq.hub import Hub
 from openautoscopev2.zmq.utils import parse_host_and_port
 
+
 class WormTrackerHub(Hub):
-    def __init__(
-            self,
-            inbound,
-            outbound,
-            server,
-            framerate,
-            gui_fp,
-            name="hub"):
+    def __init__(self, inbound, outbound, server, framerate, gui_fp, name="hub"):
 
         Hub.__init__(self, inbound, outbound, server, name)
-        self.framerate=framerate
-        with open(os.path.join(gui_fp, 'configs.json'), 'r', encoding='utf-8') as in_file:
-            params = json.load( in_file )
-        self.z_sign = 1 if int(params['z_dir']) == 1 else -1
-        self.y_sign = 1 if int(params['y_dir']) == 1 else -1
-        self.x_sign = 1 if int(params['x_dir']) == 1 else -1
-
+        self.framerate = framerate
+        with open(
+            os.path.join(gui_fp, "configs.json"), "r", encoding="utf-8"
+        ) as in_file:
+            params = json.load(in_file)
+        self.z_sign = 1 if int(params["z_dir"]) == 1 else -1
+        self.y_sign = 1 if int(params["y_dir"]) == 1 else -1
+        self.x_sign = 1 if int(params["x_dir"]) == 1 else -1
 
     def shutdown(self):
         self._writer_shutdown()
@@ -79,15 +74,15 @@ class WormTrackerHub(Hub):
     def _teensy_commands_reset_leds(self):
         self.send("teensy_commands reset_leds")
         led_state = 0
-        for led_name in ['o', 'g']:  # except Behavior/IR led toggles
-            self.send("writer_behavior set_led_state {} {}".format( led_name, led_state ))
-            self.send("writer_gcamp set_led_state {} {}".format( led_name, led_state ))
+        for led_name in ["o", "g"]:  # except Behavior/IR led toggles
+            self.send("writer_behavior set_led_state {} {}".format(led_name, led_state))
+            self.send("writer_gcamp set_led_state {} {}".format(led_name, led_state))
 
     def _teensy_commands_set_led(self, led_name, state):
         self.send("teensy_commands set_led {} {}".format(led_name, state))
-        if led_name != 'b':  # except Behavior/IR led toggles
-            self.send("writer_behavior set_led_state {} {}".format( led_name, state ))
-            self.send("writer_gcamp set_led_state {} {}".format( led_name, state ))
+        if led_name != "b":  # except Behavior/IR led toggles
+            self.send("writer_behavior set_led_state {} {}".format(led_name, state))
+            self.send("writer_gcamp set_led_state {} {}".format(led_name, state))
 
     def _teensy_commands_get_curr_pos(self, name):
         self.send("teensy_commands get_curr_pos {}".format(name))
@@ -104,8 +99,13 @@ class WormTrackerHub(Hub):
     # This convention/function names are from `GUIClient`
     def _teensy_commands_ping(self, name):
         self.send("teensy_commands ping_position {}".format(name))
+
     def _teensy_commands_pong(self, name, x, y, z, vx, vy, vz):
-        self.send("{} set_stage_coordinates {} {} {} {} {} {}".format(name, x, y, z, vx, vy, vz))
+        self.send(
+            "{} set_stage_coordinates {} {} {} {} {} {}".format(
+                name, x, y, z, vx, vy, vz
+            )
+        )
 
     def _teensy_commands_enable(self):
         self.send("teensy_commands enable")
@@ -148,8 +148,12 @@ class WormTrackerHub(Hub):
         self.send("writer_behavior set_directory {}".format(directory))
 
     def _writer_set_write_every_n_frames(self, write_every_n_frames):
-        self.send("writer_behavior set_write_every_n_frames {}".format(write_every_n_frames))
-        self.send("writer_gcamp set_write_every_n_frames {}".format(write_every_n_frames))
+        self.send(
+            "writer_behavior set_write_every_n_frames {}".format(write_every_n_frames)
+        )
+        self.send(
+            "writer_gcamp set_write_every_n_frames {}".format(write_every_n_frames)
+        )
 
     def _tracker_set_point(self, i):
         self.send("tracker_behavior set_point {}".format(i))
@@ -187,16 +191,30 @@ class WormTrackerHub(Hub):
         self.send("tracker_behavior set_z_autofocus_tracking_offset {}".format(offset))
 
     def _flir_camera_set_region_behavior(self, z, y, x, b, offsety, offsetx):
-        self.send("FlirCameraBehavior set_region {} {} {} {} {} {}".format(z, y, x, b, offsety, offsetx))
+        self.send(
+            "FlirCameraBehavior set_region {} {} {} {} {} {}".format(
+                z, y, x, b, offsety, offsetx
+            )
+        )
 
     def _flir_camera_set_region_gcamp(self, z, y, x, b, offsety, offsetx):
-        self.send("FlirCameraGCaMP set_region {} {} {} {} {} {}".format(z, y, x, b, offsety, offsetx))
+        self.send(
+            "FlirCameraGCaMP set_region {} {} {} {} {} {}".format(
+                z, y, x, b, offsety, offsetx
+            )
+        )
 
     def _flir_camera_set_exposure_framerate_behavior(self, exposure, rate):
-        self.send("FlirCameraBehavior set_exposure_framerate {} {}".format(exposure * 1000, rate))
+        self.send(
+            "FlirCameraBehavior set_exposure_framerate {} {}".format(
+                exposure * 1000, rate
+            )
+        )
 
     def _flir_camera_set_exposure_framerate_gcamp(self, exposure, rate):
-        self.send("FlirCameraGCaMP set_exposure_framerate {} {}".format(exposure * 1000, rate))
+        self.send(
+            "FlirCameraGCaMP set_exposure_framerate {} {}".format(exposure * 1000, rate)
+        )
 
     def _flir_camera_start(self):
         self.send("FlirCameraBehavior start")
@@ -228,6 +246,7 @@ class WormTrackerHub(Hub):
     def _controller_processor_shutdown(self):
         self.send("controller_processor shutdown")
 
+
 def main():
     arguments = docopt(__doc__)
 
@@ -237,9 +256,11 @@ def main():
         server=int(arguments["--server"]),
         framerate=int(arguments["--framerate"]),
         gui_fp=arguments["--gui_fp"],
-        name=arguments["--name"])
+        name=arguments["--name"],
+    )
 
     scope.run()
+
 
 if __name__ == "__main__":
     main()

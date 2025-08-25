@@ -3,13 +3,14 @@
 
 import numpy as np
 
+
 def is_nan(x):
-    return ( x is None or np.isnan(x) )
+    return x is None or np.isnan(x)
 
 
-class PIDController():
+class PIDController:
 
-    def __init__(self, Kpy, Kpx, Kiy, Kix, Kdy, Kdx, SPy, SPx, scale_factor = 1.0):
+    def __init__(self, Kpy, Kpx, Kiy, Kix, Kdy, Kdx, SPy, SPx, scale_factor=1.0):
 
         self.Kpy = Kpy
         self.Kiy = Kiy
@@ -26,14 +27,14 @@ class PIDController():
         self.SPx = self.SPy0
 
         self.scale_factor = scale_factor
-        
+
         self.reset()
         return
-    
+
     def reset(self):
         self.Ey = 0.0
         self.Ex = 0.0
-        
+
         self.Iy = 0.0
         self.Ix = 0.0
 
@@ -52,19 +53,35 @@ class PIDController():
             self.reset()
             return int(-self.Vy), int(self.Vx)
 
-        Ey = self.SPy - self.scale_factor*y if y is not None and not np.isnan(y) else self.SPy
-        Ex = self.SPx - self.scale_factor*x if x is not None and not np.isnan(x)  else self.SPx
+        Ey = (
+            self.SPy - self.scale_factor * y
+            if y is not None and not np.isnan(y)
+            else self.SPy
+        )
+        Ex = (
+            self.SPx - self.scale_factor * x
+            if x is not None and not np.isnan(x)
+            else self.SPx
+        )
 
-        self.Iy = 0.1*Ey + 0.9*self.Iy
-        self.Ix = 0.1*Ex + 0.9*self.Ix
-        
+        self.Iy = 0.1 * Ey + 0.9 * self.Iy
+        self.Ix = 0.1 * Ex + 0.9 * self.Ix
+
         Dy = Ey - self.Ey
         Dx = Ex - self.Ex
 
         self.Ey = Ey
         self.Ex = Ex
 
-        self.Vy = self.Kpy * np.sign(Ey) * (Ey / 50)**2 * 50 + self.Kiy * self.Iy + self.Kdy * Dy
-        self.Vx = self.Kpx * np.sign(Ex) * (Ex / 50)**2 * 50 + self.Kix * self.Ix + self.Kdx * Dx
+        self.Vy = (
+            self.Kpy * np.sign(Ey) * (Ey / 50) ** 2 * 50
+            + self.Kiy * self.Iy
+            + self.Kdy * Dy
+        )
+        self.Vx = (
+            self.Kpx * np.sign(Ex) * (Ex / 50) ** 2 * 50
+            + self.Kix * self.Ix
+            + self.Kdx * Dx
+        )
 
         return int(-self.Vy), int(self.Vx)

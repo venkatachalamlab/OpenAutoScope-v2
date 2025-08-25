@@ -83,64 +83,61 @@ GamepadState = namedtuple(
         "left_trigger",
         "right_trigger",
         "left_stick",
-        "right_stick"
-    ])
+        "right_stick",
+    ],
+)
 
 GamepadButtonMask = {
-    "dpad_up"       : 0x0001,
-    "dpad_down"     : 0x0002,
-    "dpad_left"     : 0x0004,
-    "dpad_right"    : 0x0008,
-    "start"         : 0x0010,
-    "back"          : 0x0020,
-    "left_thumb"    : 0x0040,
-    "right_thumb"   : 0x0080,
-    "left_shoulder" : 0x0100,
+    "dpad_up": 0x0001,
+    "dpad_down": 0x0002,
+    "dpad_left": 0x0004,
+    "dpad_right": 0x0008,
+    "start": 0x0010,
+    "back": 0x0020,
+    "left_thumb": 0x0040,
+    "right_thumb": 0x0080,
+    "left_shoulder": 0x0100,
     "right_shoulder": 0x0200,
-    "A"             : 0x1000,
-    "B"             : 0x2000,
-    "X"             : 0x4000,
-    "Y"             : 0x8000
+    "A": 0x1000,
+    "B": 0x2000,
+    "X": 0x4000,
+    "Y": 0x8000,
 }
 
-class XInputProcessor():
 
-    def __init__(self,
-                 name: str,
-                 inbound: Tuple[str, int],
-                 outbound: Tuple[str, int],
-                 thumbstick_deadzone: int,
-                 trigger_threshold: int
-        ):
+class XInputProcessor:
+
+    def __init__(
+        self,
+        name: str,
+        inbound: Tuple[str, int],
+        outbound: Tuple[str, int],
+        thumbstick_deadzone: int,
+        trigger_threshold: int,
+    ):
         self.name = name
         self.thumbstick_deadzone = thumbstick_deadzone
         self.trigger_threshold = trigger_threshold
 
-        self.current_state = GamepadState(
-            *([False]*14), 0, 0, (0, 0), (0, 0))
+        self.current_state = GamepadState(*([False] * 14), 0, 0, (0, 0), (0, 0))
 
         self.subscriber = ObjectSubscriber(
-            obj=self,
-            host=inbound[0],
-            port=inbound[1],
-            bound=inbound[2],
-            name=self.name
+            obj=self, host=inbound[0], port=inbound[1], bound=inbound[2], name=self.name
         )
 
-        self.publisher = Publisher(outbound[1],
-                                   outbound[0],
-                                   outbound[2])
+        self.publisher = Publisher(outbound[1], outbound[0], outbound[2])
         self.running = True
         self.packet_number = 0
         self.surely_connected = False
-    
+
     def shutdown(self):
-        self.update_and_send_state(0,0,0,0,0,0,0)
+        self.update_and_send_state(0, 0, 0, 0, 0, 0, 0)
         self.running = False
 
     def run(self):
         def _finish(*_):
             raise SystemExit
+
         signal.signal(signal.SIGINT, _finish)
 
         while self.running:
@@ -148,16 +145,20 @@ class XInputProcessor():
                 try:
                     state = XInput.get_state(0)
                     self.surely_connected = True
-                except:
+                except Exception as e:
+                    print(f"Exception in `controller_processor.py`\n{str(e)}")
                     self.surely_connected = False
                     time.sleep(0.1)
             if state.dwPacketNumber != self.packet_number:
                 self.packet_number = state.dwPacketNumber
                 self.update_and_send_state(
                     state.Gamepad.wButtons,
-                    state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger,
-                    state.Gamepad.sThumbLX, state.Gamepad.sThumbLY,
-                    state.Gamepad.sThumbRX, state.Gamepad.sThumbRY
+                    state.Gamepad.bLeftTrigger,
+                    state.Gamepad.bRightTrigger,
+                    state.Gamepad.sThumbLX,
+                    state.Gamepad.sThumbLY,
+                    state.Gamepad.sThumbRX,
+                    state.Gamepad.sThumbRY,
                 )
             self.surely_connected = False
 
@@ -167,19 +168,26 @@ class XInputProcessor():
 
             time.sleep(0.001)
 
-
     # Update State
-    def update_and_send_state(self,
-            wButtons,
-            bLeftTrigger, bRightTrigger,
-            sThumbLX, sThumbLY,
-            sThumbRX, sThumbRY
-            ):
+    def update_and_send_state(
+        self,
+        wButtons,
+        bLeftTrigger,
+        bRightTrigger,
+        sThumbLX,
+        sThumbLY,
+        sThumbRX,
+        sThumbRY,
+    ):
         # Generate GamePadState from Trigger Buttons
         gamepadstate_raw = self.gamepad_state_from_states(
             wButtons,
-            bLeftTrigger, bRightTrigger,
-            sThumbLX, sThumbLY, sThumbRX, sThumbRY
+            bLeftTrigger,
+            bRightTrigger,
+            sThumbLX,
+            sThumbLY,
+            sThumbRX,
+            sThumbRY,
         )
         # Convert States to Interpretable Values
         new_state = self.sanitize_state(gamepadstate_raw)
@@ -193,11 +201,8 @@ class XInputProcessor():
 
     @staticmethod
     def gamepad_state_from_states(
-            wButtons,
-            bLeftTrigger, bRightTrigger,
-            sThumbLX, sThumbLY,
-            sThumbRX, sThumbRY
-        ) -> GamepadState:
+        wButtons, bLeftTrigger, bRightTrigger, sThumbLX, sThumbLY, sThumbRX, sThumbRY
+    ) -> GamepadState:
         """This converts states into a valid GamepadState."""
 
         # Handle the buttons.
@@ -219,7 +224,7 @@ class XInputProcessor():
     def gamepad_state_from_bytes(msg: bytes) -> GamepadState:
         """This converts a sequence of bytes into a valid GamepadState."""
 
-        vals = struct.unpack(b'HBBhhhh', msg)
+        vals = struct.unpack(b"HBBhhhh", msg)
 
         # Handle the buttons.
         state_dict = {}
@@ -236,35 +241,34 @@ class XInputProcessor():
 
         return GamepadState(**state_dict)
 
-
-
     def sanitize_state(self, s: GamepadState) -> GamepadState:
         """This takes a gamepad state and determines whether the analog signals
         are above the required thresholds. A new sanitized state is
         returned."""
 
         thresh = self.trigger_threshold
-        clean_trigger = lambda x: x if x >= thresh else 0
+        clean_trigger = lambda x: x if x >= thresh else 0  # noqa: E731
 
         left_trigger = clean_trigger(s.left_trigger)
         right_trigger = clean_trigger(s.right_trigger)
 
         dzone = self.thumbstick_deadzone
-        clean_stick_xy = lambda x: x if abs(x) >= dzone else 0
-        clean_stick = lambda x: tuple(map(clean_stick_xy, x))
+        clean_stick_xy = lambda x: x if abs(x) >= dzone else 0  # noqa: E731
+        clean_stick = lambda x: tuple(map(clean_stick_xy, x))  # noqa: E731
 
         left_stick = clean_stick(s.left_stick)
         right_stick = clean_stick(s.right_stick)
 
-        return GamepadState(*s[0:14], left_trigger, right_trigger, left_stick,
-           right_stick)
+        return GamepadState(
+            *s[0:14], left_trigger, right_trigger, left_stick, right_stick
+        )
 
     @staticmethod
-    def get_events_from_states(s0: GamepadState, s1: GamepadState)->List[str]:
+    def get_events_from_states(s0: GamepadState, s1: GamepadState) -> List[str]:
         """This calculates the difference between two controller states and
         generates a list of events  describing the difference."""
 
-        messages =[]
+        messages = []
 
         # Handle the buttons.
         for b in GamepadButtonMask:
@@ -283,14 +287,13 @@ class XInputProcessor():
 
         # Handle the thumbsticks.
         if s1.left_stick != s0.left_stick:
-            messages.append(
-                "left_stick {} {}".format(*s1.left_stick))
+            messages.append("left_stick {} {}".format(*s1.left_stick))
 
         if s1.right_stick != s0.right_stick:
-            messages.append(
-                "right_stick {} {}".format(*s1.right_stick))
+            messages.append("right_stick {} {}".format(*s1.right_stick))
 
         return messages
+
 
 def main():
     arguments = docopt(__doc__)
@@ -303,6 +306,7 @@ def main():
 
     processor = XInputProcessor(name, inbound, outbound, deadzone, threshold)
     processor.run()
+
 
 if __name__ == "__main__":
     main()

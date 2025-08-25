@@ -9,16 +9,18 @@ import h5py
 import numpy as np
 
 
-class ArrayWriter():
-    def __init__(self,
-                 src,
-                 filename: str,
-                 shape: Tuple[int, ...],
-                 dtype: np.dtype,
-                 groupname: Union[None, str] = None,
-                 compression="lzf",
-                 compression_opts=None):
-        """ src.recv must be a coroutine that returns numpy arrays of the
+class ArrayWriter:
+    def __init__(
+        self,
+        src,
+        filename: str,
+        shape: Tuple[int, ...],
+        dtype: np.dtype,
+        groupname: Union[None, str] = None,
+        compression="lzf",
+        compression_opts=None,
+    ):
+        """src.recv must be a coroutine that returns numpy arrays of the
         specified shape and type."""
 
         self.src = src
@@ -40,12 +42,14 @@ class ArrayWriter():
             self.group = self.file.create_group(groupname)
 
         self.data = self.group.create_dataset(
-            "data", (0, *shape),
+            "data",
+            (0, *shape),
             chunks=(1, *shape),
             dtype=dtype,
             compression=compression,
             compression_opts=compression_opts,
-            maxshape=(None, *shape))
+            maxshape=(None, *shape),
+        )
 
     def close(self):
         self.file.close()
@@ -70,34 +74,33 @@ class ArrayWriter():
         self.data[self.N_complete - 1, ...] = x
 
     @classmethod
-    def from_source(cls,
-                    src,
-                    filename: str,
-                    groupname: Union[None, str] = None):
+    def from_source(cls, src, filename: str, groupname: Union[None, str] = None):
         """If the source has shape and dtype fields, this can be used to
         construct the writer more succinctly."""
         return cls(src, filename, src.shape, src.dtype, groupname)
 
 
 class TimestampedArrayWriter(ArrayWriter):
-    def __init__(self,
-                 src,
-                 filename: str,
-                 shape: Tuple[int, ...],
-                 dtype: np.dtype,
-                 groupname: Union[None, str] = None,
-                 compression="lzf",
-                 compression_opts=None):
-        """ src must yield numpy arrays with shape and dtype matching the shape
+    def __init__(
+        self,
+        src,
+        filename: str,
+        shape: Tuple[int, ...],
+        dtype: np.dtype,
+        groupname: Union[None, str] = None,
+        compression="lzf",
+        compression_opts=None,
+    ):
+        """src must yield numpy arrays with shape and dtype matching the shape
         and dtype provided."""
 
-        ArrayWriter.__init__(self, src, filename, shape, dtype, groupname,
-                             compression, compression_opts)
+        ArrayWriter.__init__(
+            self, src, filename, shape, dtype, groupname, compression, compression_opts
+        )
 
-        self.times = self.group.create_dataset("times", (0, ),
-                                               chunks=(1, ),
-                                               dtype=np.dtype("float64"),
-                                               maxshape=(None, ))
+        self.times = self.group.create_dataset(
+            "times", (0,), chunks=(1,), dtype=np.dtype("float64"), maxshape=(None,)
+        )
 
     def append_data(self, msg):
 
@@ -106,7 +109,7 @@ class TimestampedArrayWriter(ArrayWriter):
         self.N_complete += 1
 
         self.data.resize((self.N_complete, *self.shape))
-        self.times.resize((self.N_complete, ))
+        self.times.resize((self.N_complete,))
 
         self.data[self.N_complete - 1, ...] = x
         self.times[self.N_complete - 1] = t

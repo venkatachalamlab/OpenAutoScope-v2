@@ -29,31 +29,22 @@ from openautoscopev2.zmq.publisher import Publisher
 from openautoscopev2.zmq.subscriber import Subscriber, ObjectSubscriber
 from openautoscopev2.zmq.utils import parse_host_and_port
 
-class XboxStageCommands():
 
-    def __init__(self,
-                 inbound: Tuple[str, int],
-                 outbound: Tuple[str, int],
-                 commands: Tuple[str, int],
-                 name):
+class XboxStageCommands:
 
-        self.subscriber = Subscriber(
-            inbound[1],
-            inbound[0],
-            inbound[2]
-        )
+    def __init__(
+        self,
+        inbound: Tuple[str, int],
+        outbound: Tuple[str, int],
+        commands: Tuple[str, int],
+        name,
+    ):
 
-        self.publisher = Publisher(
-            outbound[1],
-            outbound[0],
-            outbound[2]
-        )
+        self.subscriber = Subscriber(inbound[1], inbound[0], inbound[2])
+
+        self.publisher = Publisher(outbound[1], outbound[0], outbound[2])
         self.subscriber_commands = ObjectSubscriber(
-            self,
-            commands[1],
-            commands[0],
-            commands[2],
-            name = name
+            self, commands[1], commands[0], commands[2], name=name
         )
 
         self.poller = zmq.Poller()
@@ -63,16 +54,20 @@ class XboxStageCommands():
         self.running = True
 
         buttons = [
-            b"dpad_up pressed", b"dpad_up released",
-            b"dpad_down pressed", b"dpad_down released",
-            b"dpad_right pressed", b"dpad_left pressed",
-            b"right_stick", b"left_stick",
-            ]
+            b"dpad_up pressed",
+            b"dpad_up released",
+            b"dpad_down pressed",
+            b"dpad_down released",
+            b"dpad_right pressed",
+            b"dpad_left pressed",
+            b"right_stick",
+            b"left_stick",
+        ]
 
         self.subscriber.remove_subscription("")
         for button in buttons:
             self.subscriber.add_subscription(button)
-    
+
     def shutdown(self):
         self.running = False
         return
@@ -96,8 +91,12 @@ class XboxStageCommands():
             self.publisher.send("hub _teensy_commands_movez 0")
 
         elif tokens[0] == "left_stick":
-            self.publisher.send("hub _teensy_commands_movex {}".format(int(tokens[1]) // 50))
-            self.publisher.send("hub _teensy_commands_movey {}".format(int(tokens[2]) // 50))
+            self.publisher.send(
+                "hub _teensy_commands_movex {}".format(int(tokens[1]) // 50)
+            )
+            self.publisher.send(
+                "hub _teensy_commands_movey {}".format(int(tokens[2]) // 50)
+            )
 
         elif tokens[0] == "right_stick":
             self.publisher.send("hub _teensy_commands_movex {}".format(int(tokens[1])))
@@ -121,6 +120,7 @@ class XboxStageCommands():
             if self.subscriber_commands.socket in sockets:
                 self.subscriber_commands.handle()
 
+
 def main():
     arguments = docopt(__doc__)
 
@@ -133,11 +133,6 @@ def main():
 
     processor._run()
 
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
-

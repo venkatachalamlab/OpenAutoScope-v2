@@ -29,26 +29,28 @@ from openautoscopev2.zmq.publisher import Publisher
 from openautoscopev2.zmq.subscriber import ObjectSubscriber
 from openautoscopev2.zmq.utils import parse_host_and_port
 
-class TeensyCommandsDevice():
+
+class TeensyCommandsDevice:
 
     _COMMANDS = {
         "get_pos": "gp\n",
-        "sx":"sx{xvel}\n",
-        "sy":"sy{yvel}\n",
-        "sz":"sz{zvel}\n",
-        "disable":"sf\n",
-        "enable":"sn\n",
-        "set_led":"l{led_name}{state}\n",
+        "sx": "sx{xvel}\n",
+        "sy": "sy{yvel}\n",
+        "sz": "sz{zvel}\n",
+        "disable": "sf\n",
+        "enable": "sn\n",
+        "set_led": "l{led_name}{state}\n",
         "set_motor_limit": "m{motor}{direction}",
         "ping": "ping\n",
-        }
+    }
 
     def __init__(
-            self,
-            inbound: Tuple[str, int, bool],
-            outbound: Tuple[str, int, bool],
-            port,
-            name="teensy_commands"):
+        self,
+        inbound: Tuple[str, int, bool],
+        outbound: Tuple[str, int, bool],
+        port,
+        name="teensy_commands",
+    ):
 
         self.status = {}
         self.port = port
@@ -59,19 +61,15 @@ class TeensyCommandsDevice():
         self.led_o_state = False
         self.led_g_state = False
 
-        self.coords = [0]*6
+        self.coords = [0] * 6
 
         self.command_subscriber = ObjectSubscriber(
-            obj=self,
-            name=name,
-            host=inbound[0],
-            port=inbound[1],
-            bound=inbound[2])
+            obj=self, name=name, host=inbound[0], port=inbound[1], bound=inbound[2]
+        )
 
         self.status_publisher = Publisher(
-            host=outbound[0],
-            port=outbound[1],
-            bound=outbound[2])
+            host=outbound[0], port=outbound[1], bound=outbound[2]
+        )
 
         try:
             self.serial_obj = Serial(port=self.port, baudrate=115200, timeout=0)
@@ -93,7 +91,9 @@ class TeensyCommandsDevice():
         self._execute("sz", zvel=zvel)
 
     def update_coordinates(self):
-        self.status_publisher.send("logger " + json.dumps({"position": [self.x, self.y, self.z]}, default=int))
+        self.status_publisher.send(
+            "logger " + json.dumps({"position": [self.x, self.y, self.z]}, default=int)
+        )
 
     def log(self, msg):
         self.status_publisher.send("logger " + str(msg))
@@ -109,31 +109,45 @@ class TeensyCommandsDevice():
 
     def get_pos(self, name, i):
         self._execute("get_pos")
-        self.status_publisher.send(f"hub _teensy_commands_set_pos {name} {i} {self.x} {self.y} {self.z}")
+        self.status_publisher.send(
+            f"hub _teensy_commands_set_pos {name} {i} {self.x} {self.y} {self.z}"
+        )
 
     def get_curr_pos(self, name):
         self._execute("get_pos")
-        self.status_publisher.send(f"hub _teensy_commands_set_curr_pos {name} {self.x} {self.y} {self.z}")
+        self.status_publisher.send(
+            f"hub _teensy_commands_set_curr_pos {name} {self.x} {self.y} {self.z}"
+        )
 
     def ping_position(self, name):
         self._execute("get_pos")
-        self.status_publisher.send(f"hub _teensy_commands_pong {name} {self.x} {self.y} {self.z} {self.vx} {self.vy} {self.vz}")
+        self.status_publisher.send(
+            (
+                f"hub _teensy_commands_pong {name} {self.x} {self.y} {self.z} "
+                f"{self.vx} {self.vy} {self.vz}"
+            )
+        )
 
     @property
     def x(self):
         return self.coords[0]
+
     @property
     def y(self):
         return self.coords[1]
+
     @property
     def z(self):
         return self.coords[2]
+
     @property
     def vx(self):
         return self.coords[3]
+
     @property
     def vy(self):
         return self.coords[4]
+
     @property
     def vz(self):
         return self.coords[5]
@@ -149,12 +163,12 @@ class TeensyCommandsDevice():
         self._execute("set_led", led_name=name, state=state)
 
     def reset_leds(self):
-        for led_name in ['b', 'o', 'g']:
+        for led_name in ["b", "o", "g"]:
             self.set_led(led_name, 0)
 
     def change_vel_z(self, sign):
-        self.zspeed = int(np.clip(self.zspeed * 2 ** sign, 1, 1024))
-        print("zspeed is: {}   ".format(self.zspeed), end='\r')
+        self.zspeed = int(np.clip(self.zspeed * 2**sign, 1, 1024))
+        print("zspeed is: {}   ".format(self.zspeed), end="\r")
 
     def start_z_move(self, sign):
         self.movez(sign * self.zspeed)
@@ -172,8 +186,10 @@ class TeensyCommandsDevice():
     def _execute(self, cmd: str, **kwargs):
         cmd_format_string = self._COMMANDS[cmd]
         formatted_string = cmd_format_string.format(**kwargs)
-        self.log(f"<TEENSY COMMANDS> executing: {formatted_string[:-1]}")  # Log except the trailing `\n`
-        reply = b''
+        self.log(
+            f"<TEENSY COMMANDS> executing: {formatted_string[:-1]}"
+        )  # Log except the trailing `\n`
+        reply = b""
         self.serial_obj.write(bytes(formatted_string, "ascii"))
         while not reply:
             reply = self.serial_obj.readline()
@@ -186,6 +202,7 @@ class TeensyCommandsDevice():
         while self.device_status:
             self.command_subscriber.handle()
 
+
 def main():
     arguments = docopt(__doc__)
 
@@ -193,10 +210,12 @@ def main():
         inbound=parse_host_and_port(arguments["--inbound"]),
         outbound=parse_host_and_port(arguments["--outbound"]),
         port=arguments["--port"],
-        name=arguments["--name"])
+        name=arguments["--name"],
+    )
 
     if device is not None:
         device._run()
+
 
 if __name__ == "__main__":
     main()
