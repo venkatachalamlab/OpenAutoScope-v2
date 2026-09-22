@@ -1,4 +1,4 @@
-# Calibration and Parameter settings
+# Calibration and Parameter Settings
 
 If you've reached this point, we assume that you have completed the hardware assembly, installed the software, familiarized yourself with the parameter file, 
 read about how to utilize the GUI or Xbox controller for stage movement.
@@ -8,7 +8,7 @@ read about how to utilize the GUI or Xbox controller for stage movement.
 To ensure functionality, three devices must be connected to power supplies. The PCB board and two LED controllers require individual power sources. 
 For the PCB board, use the 5A power supply. As for the LED controllers, the power adapter provided by Thorlabs is suitable for their operation.
 
-### LED Contoller
+### LED Controller
 
 
 To determine the maximum allowed current for the 470nm LED and the 595nm LED, refer to their respective specification sheets. These documents provide information
@@ -78,7 +78,7 @@ Note that the precision zoom housings were initially set to their mid-travel ran
 7- Use the offset buttons on the GUI to adjust the offset values for both the x and y axes for each camera. Fine-tune these values to achieve perfect alignment and ensure that the images are precisely aligned.  
 8- Record the final offset values that resulted in perfect alignment in the [configuration file](../configs.json) and change the parameter 'q' to 0.7 (or any other desired value)  
 
-Ther fisrt image shows the ovelay image before adjusting the offset values and the second image is after the adjustment.  
+The first image shows the channel overlay before offset adjustment; the second shows the aligned result.
 
 <p align="center">
   <img src="../images/images/before.PNG" alt="Image" height="300">

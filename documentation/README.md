@@ -1,38 +1,43 @@
+# OpenAutoScope v2 Documentation
 
-This is to navigate to different sections of the documentation for OpenAutoScope2.0. The tutorials provided cover a range of topics including assembling the system,
-installing the software, configuring the necessary parameters, performing calibration, preparing samples for optimal results, and conducting imaging sessions on the prepared samples.
-You can refer to the specific sections that align with your current needs and requirements.
+This index organizes the repository for readers who want to understand the system, build it, operate it, or inspect the research it enables. OpenAutoScope v2 is a deployed laboratory instrument; verify the current hardware revision and local safety procedures before following an operating instruction.
 
-## [Printed Circuit Board](../pcb)
+## Understand the System
 
-The manufacturing of the printed circuit board (PCB) typically requires a certain amount of time. There are multiple vendors available, both within and outside the US, that handle PCB production. We used EasyEDA for designing the PCB and ordering it, including the soldered components.
+| Document | Purpose |
+| --- | --- |
+| [System overview](system-overview.md) | Optical paths, motion hardware, electronics, and design goals |
+| [Software architecture](software-architecture.md) | Runtime processes, messages, image flow, and configuration |
+| [Neural-network tracking](tracking.md) | Terminal-bulb localization, training datasets, and attribution |
+| [Long-term data showcase](data-showcase.md) | Approved derived figures, methods, and dataset provenance |
+| [Project history and contributions](project-history.md) | Development history and collaborator roles |
+| [Media attribution](media-attribution.md) | Sources and reuse terms for images and derived figures |
 
-## [Software Installation](installation.md)
-The git repository contains all the software codes for the system, primarily written in Python programming language. To ensure the hardware components, such as the Cameras and Teensy board, function properly, specific Software Development Kits (SDKs) are needed. This file provides a comprehensive, step-by-step guide on installing all the necessary packages, libraries, and SDKs for running the system effectively.
+## Build the Instrument
 
-## [Hardware Assembly](https://drive.google.com/file/d/1PnN88vxZwhIJeRHgJQa5Ft3MLd5eSH1t/view?usp=share_link)
-The provided pdf file serves as a comprehensive construction manual for the OpenAutoScope 2.0 system. It offers a detailed, step-by-step guide for assembling the system. The list of all the necessary parts required for the assembly can be found [here](../parts/parts.pdf). Towards the final stages of the assembly process, the SpinView application is utilized to align the cameras accurately. For more information on installing the SpinView application, refer to the [installation](installation.md) section.
+| Resource | Scope |
+| --- | --- |
+| [Parts list](../parts/parts.pdf) | Mechanical, optical, and electronic components |
+| [PCB manufacturing files](../pcb/README.md) | Gerber and drill files with ordering notes |
+| [Assembly preview](../images/showcase/assembly-preview.gif) | Condensed view of the mechanical build sequence |
+| [Hardware assembly manual](https://drive.google.com/file/d/1PnN88vxZwhIJeRHgJQa5Ft3MLd5eSH1t/view?usp=share_link) | Step-by-step construction guide maintained with the project materials |
 
-## [Graphical User Interface (GUI)](gui.md)
-This document provides an explanation of the various elements present in the graphical user interface (GUI) and their respective functions.
-It is assumed that you have already assembled the system before proceeding to this stage.
+## Install and Configure
 
+| Document | Scope |
+| --- | --- |
+| [Software installation](installation.md) | Windows environment, Spinnaker SDK, Python environment, and Teensy setup |
+| [Parameters](parameters.md) | Configuration-file fields and motion or acquisition settings |
+| [Calibration](calibration.md) | Cameras, illumination, motor drivers, and optical alignment |
 
+## Run an Experiment
 
-## [Parameters](parameters.md)
-Within this file, you will find the definitions for parameters in the [configuration file](../configs.json) as well as various other components of the system.
+| Document | Scope |
+| --- | --- |
+| [Graphical interface](gui.md) | Controls and live displays |
+| [Xbox controller](xbox_controller.md) | Manual stage motion |
+| [Imaging session](imaging_session.md) | Example sequence for starting and recording an experiment |
 
-## [Calibrations](calibration.md) 
-At this stage, with the hardware assembly completed and the software installed, you are ready to run the system and utilize the graphical user interface. However, it is important to note that certain devices may require calibration, and the cameras need to be aligned to ensure simultaneous focus and image alignment. This guide shows you how to perform the necessary steps.
+## Safety and Scope
 
-## [Sample Preparation](sample_preparation.md)
-The purpose of the protocol is to ensure optimal performance of the tracking algorithm by emphasizing the importance of sample preparation. To achieve precise z tracking during imaging and effectively image single neurons, it is recommended to prepare the sample on glass. For improved tracking accuracy, it is advised to prepare agar plates with a low peptone percentage and seed them with a small amount of OP50 close to the experiment's execution, minimizing food residues in the recordings. Additionally, creating thin agar plates and utilizing agarose or noble agar enhances sample transparency, thereby increasing the signal-to-noise ratio in the recordings.
-
-## [Motion Control With The Xbox Controller](xbox_controller.md)
-This explains how you can utilize an Xbox controller to easily move the stage and find the sample and focus on it.
-
-
-
-## [How to run an imaging session](imaging_session.md)
-This is an example flow for an imaging session with OpenAutoScope 2.0:
-
+These pages document a particular research system. They do not replace institutional laser, electrical, mechanical, chemical, or biological safety procedures. Configuration values and device identifiers shown in the repository should be treated as installation-specific.

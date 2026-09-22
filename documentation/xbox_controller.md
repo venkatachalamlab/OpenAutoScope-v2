@@ -1,4 +1,6 @@
-In this system, we have added the benefits of using an Xbox controller for navigating the system, even though the software itself provides various ways to move the stage
+# Xbox Controller
+
+An Xbox controller can be used to navigate the system, although the software also provides controls for moving the stage
 in all directions. The Xbox controller is primarily utilized for motion control, although it is possible to assign additional functions to its buttons if desired.
 
 To adjust the z speed, we can utilize the left and right buttons on the controller. These buttons allow us to modify the speed by a factor of 2, either doubling it or halving it.
