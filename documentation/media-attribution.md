@@ -22,6 +22,8 @@ This page records the provenance and reuse terms for visuals displayed in the Op
 | Asset | Content | Provenance |
 | --- | --- | --- |
 | [`longitudinal-overview.png`](../images/showcase/longitudinal-overview.png) | Morphology, food-relative position, and timing of 44 observations | Derived from data collected and analyzed by Sina Rasouli; display approved by the Venkatachalam Lab |
+| [`body-width-and-masks.png`](../images/showcase/body-width-and-masks.png) | Body-width profiles and processed segmentation masks at four times | Derived from data collected and analyzed by Sina Rasouli; display approved by the Venkatachalam Lab |
+| [`pumping-kymograph-with-reference.png`](../images/showcase/pumping-kymograph-with-reference.png) | Processed pumping kymograph, manual pump marks, and a separate pharynx reference crop | Kymograph and annotations derived from data collected and analyzed by Sina Rasouli; reference cropped from the existing OpenAutoScope [`trackercnn.png`](../images/images/trackercnn.png) project figure; display approved by the Venkatachalam Lab |
 | [`representative-observation.png`](../images/showcase/representative-observation.png) | Matched NSM fluorescence and pumping kymograph | Derived from data collected and analyzed by Sina Rasouli; display approved by the Venkatachalam Lab |
 | [`pumping-across-development.png`](../images/showcase/pumping-across-development.png) | Pumping kymographs from three developmental times | Derived from data collected and analyzed by Sina Rasouli; display approved by the Venkatachalam Lab |
 

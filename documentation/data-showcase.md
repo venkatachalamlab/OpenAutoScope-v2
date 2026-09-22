@@ -26,6 +26,20 @@ Processing used for this documentation figure:
 
 These steps make developmental trends easier to see while limiting the effect of isolated segmentation errors.
 
+## Body Shape and Segmentation Masks
+
+![Body-width profiles and segmentation masks at four times after hatching](../images/showcase/body-width-and-masks.png)
+
+The four curves summarize body width along the animal, using the interior positions of a 49-point profile. They use four-hour windows centered at 6, 24, 40, and 90 hours after hatching. At each position, the line is the median and the band spans the 25th to 75th percentiles. The matching masks below are individual frames at those times, cropped to the same pixel dimensions so that the change in apparent size is preserved. The outline is the boundary of each processed binary mask; the raw transmitted-light frames are not shown.
+
+For the width summaries, frames with non-finite or non-positive body area or centerline length, frames before hatching, and marked tracking-loss intervals with a ten-frame buffer were excluded. Every 80th remaining frame in each window was sampled. Non-finite and non-positive widths were omitted, and the two end positions were excluded from the profiles. The masks are shown without smoothing or anatomical-stage assignments.
+
+## Pumping Event Detail
+
+![Pharyngeal kymograph with manual pump marks and a separate pharynx reference image](../images/showcase/pumping-kymograph-with-reference.png)
+
+The kymograph is a ten-second excerpt from one of the 44 pumping observations, approximately 65.6 hours after hatching. Its grayscale range spans the second to 98th percentiles of the displayed excerpt. Red ticks below the kymograph are pump events recovered from manual marks in the corresponding annotated image; they are not automatic pump detections. The right-hand image is a crop of the separate tracking example in [`trackercnn.png`](../images/images/trackercnn.png), not a frame from this pumping observation. The terminal-bulb marker is part of that source image.
+
 ## Matched NSM and Pumping Observation
 
 ![Representative NSM trace and pharyngeal pumping kymograph](../images/showcase/representative-observation.png)

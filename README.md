@@ -49,11 +49,23 @@ The example below comes from one unpublished recording collected and analyzed by
 
 ![Longitudinal morphology, food position, and observation timeline](images/showcase/longitudinal-overview.png)
 
+### Body Shape
+
+The width profiles show how body shape changes during the recording. Each curve is the median width along the body in a four-hour window centered at the time indicated below it; the shaded band covers the middle half of valid measurements. The matching silhouettes are single segmentation masks shown at the same image scale. Their colored outlines trace the processed masks, not the perimeter overlaid on raw camera frames.
+
+![Body-width profiles and segmentation masks at four times after hatching](images/showcase/body-width-and-masks.png)
+
+### Pharyngeal Pumping
+
+This ten-second kymograph excerpt shows intensity along the pharynx, with red ticks for manually annotated pumping events. The enlarged image at right comes from a separate tracking frame already in this repository. Its marker identifies the terminal-bulb region for anatomical context; the image is not synchronized with the kymograph.
+
+![Pharyngeal kymograph with manual pump marks and a separate pharynx reference image](images/showcase/pumping-kymograph-with-reference.png)
+
 The strain identifier is intentionally omitted. These observations do not imply uninterrupted fluorescence imaging. Raw data are not stored in this repository.
 
-The [data showcase](documentation/data-showcase.md) presents a matched NSM and pumping observation, kymographs across development, processing details, and data provenance.
+The [data showcase](documentation/data-showcase.md) provides processing details, a matched NSM and pumping observation, and additional kymographs across development.
 
-## Neural-Network Tracking
+## CNN-Based Tracking
 
 The tracking model localizes the terminal bulb to guide XY stage motion. Mahdi Torkashvand collected and manually annotated the initial approximately 17,000 behavior frames. Mahdi and Sina Rasouli collaborated on later dataset expansion and augmentation; Sina led model training, integration into the control software, and later system modifications.
 
